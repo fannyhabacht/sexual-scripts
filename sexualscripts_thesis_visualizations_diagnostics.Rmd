@@ -1,0 +1,756 @@
+---
+title: "sexualscripts_thesis_visualizations_diagnostics"
+author: "Fanny Habacht"
+date: "2023-02-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+This code includes preparing the dataset further for the main analysis (total scores, removing non-hetero participants and nb/prefer not to say people, only extracting scales), as well as visualizations of the sexual script scales and diagnostics, such as multivariate normality and outliers.
+
+
+# Packages
+```{r}
+
+packages <- c('readr', 'dplyr', 'ggplot2', 'MVN', 'psych', 'cowplot')
+
+lapply(packages, library, character.only = TRUE)
+
+```
+
+
+# Data
+```{r}
+
+data_clean <- read_csv('data_sexualscript_clean.csv') # load clean data
+
+```
+
+
+## Recoding reverse-coded items
+```{r}
+
+# only the Sakaluk et al scale has reverse-coded items
+
+reverse_cols = c('player_3', 'player_4', 'emotionalsex_3')
+
+data_clean[ , reverse_cols] = 7 - data_clean[ , reverse_cols]
+
+```
+
+
+## Removing participants not hetero and not male/female
+```{r}
+
+HETERO <- 1
+NONBINARY <- 3
+NOTSAID <- 4
+
+
+data_nothetero <- data_clean %>% 
+  filter(sexuality != HETERO)
+
+data_onlyhetero <- data_clean %>% 
+  anti_join(data_nothetero)
+
+
+data_nonbinary <- data_clean %>% 
+  filter(gender == NONBINARY)
+
+
+data_notmaleorfemale <- data_onlyhetero %>% 
+  filter(gender == NONBINARY | gender == NOTSAID)
+
+data_onlyhetero_malefemale <- data_onlyhetero %>% 
+  anti_join(data_notmaleorfemale)
+
+```
+
+
+## Extract only scales (remove demographics)
+```{r}
+
+data_heteroscales <- data_onlyhetero_malefemale %>% 
+  select(9:123)
+
+```
+
+
+## Missing data screening
+```{r}
+
+is.na(data_heteroscales) %>% # sum of missings
+  sum()
+
+
+sapply(data_heteroscales, function(x) which(is.na(x))) # location of missing values for each column
+
+```
+
+
+# Creating total scores
+```{r}
+
+data_heteroscales <- data_heteroscales %>% 
+  mutate(
+    ammsa_total = rowMeans(
+      select(data_heteroscales, starts_with('ammsa')),
+      na.rm = F),
+    sakaluk_total = rowMeans(
+      select(data_heteroscales, 1:32),
+      na.rm = F), 
+    sakaluk_sexualstandards = rowMeans(
+      select(data_heteroscales, starts_with('sexualstandards')),
+      na.rm = F),
+    sakaluk_complexity = rowMeans(
+      select(data_heteroscales, starts_with('complexity')),
+      na.rm = F),
+    sakaluk_sexdrive = rowMeans(
+      select(data_heteroscales, starts_with('sexdrive')),
+      na.rm = F),
+    sakaluk_performanceorgasm = rowMeans(
+      select(data_heteroscales, starts_with('performanceandorgasm')),
+      na.rm = F),
+    sakaluk_player = rowMeans(
+      select(data_heteroscales, starts_with('player')),
+      na.rm = F),
+    sakaluk_emotionalsex = rowMeans(
+      select(data_heteroscales, starts_with('emotionalsex')),
+      na.rm = F),
+    seabrook_total = rowMeans(
+      select(data_heteroscales, 33:54),
+      na.rm = F),
+    seabrook_courtship = rowMeans(
+      select(data_heteroscales, starts_with('courtship')),
+      na.rm = F),
+    seabrook_initiators = rowMeans(
+      select(data_heteroscales, starts_with('initiators')),
+      na.rm = F),
+    seabrook_appearance = rowMeans(
+      select(data_heteroscales, starts_with('appearance')),
+      na.rm = F),
+    seabrook_doublestandards = rowMeans(
+      select(data_heteroscales, starts_with('doublestandards')),
+      na.rm = F),
+  )
+
+```
+
+
+# Saving datasets
+```{r}
+
+# dataset only scales hetero male/female
+write.csv(data_heteroscales, 'data_sexualscript_heteroscales.csv', row.names = F)
+
+# dataset hetero male/female
+write.csv(data_onlyhetero_malefemale, 'data_sexualscript_hetero_malefemale.csv', row.names = F)
+
+# dataset only nonbinary
+write.csv(data_nonbinary, 'data_sexualscript_nonbinary.csv', row.names = F)
+
+```
+
+
+# Visualizations hetero male/female
+
+## Histograms
+
+### AMMSA-21 total
+```{r}
+
+hist_ammsa <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = ammsa_total
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 7),
+    breaks = 1:7
+  ) +
+  labs(
+    x = 'AMMSA Total',
+    y = 'Frequency',
+    title = 'AMMSA-21 (Bohner et al., 2022)'
+  ) +
+  theme_classic()
+
+hist_ammsa
+
+```
+
+
+### Sakaluk
+
+#### Sakaluk total
+```{r}
+
+hist_sakaluktotal <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = sakaluk_total
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Sexual Scripts Total',
+    y = 'Frequency',
+    title = 'Sexual Scripts Total (Sakaluk et al., 2014)'
+  ) +
+  theme_classic()
+
+hist_sakaluktotal
+
+```
+
+
+#### Sakaluk sexual standards
+```{r}
+
+hist_sakaluksexualstandards <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = sakaluk_sexualstandards
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Sexual Standards',
+    y = 'Frequency',
+    title = 'Sexual Standards (Sakaluk et al., 2014)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_sakaluksexualstandards
+
+```
+
+
+#### Sakaluk complexity
+```{r}
+
+hist_sakalukcomplexity <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = sakaluk_complexity
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Simplicity',
+    y = 'Frequency',
+    title = 'Sexual Simplicity/Complexity (Sakaluk et al., 2014)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_sakalukcomplexity
+
+```
+
+
+#### Sakaluk sex drive
+```{r}
+
+hist_sakaluksexdrive <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = sakaluk_sexdrive
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Sex Drive',
+    y = 'Frequency',
+    title = 'Sex Drive (Sakaluk et al., 2014)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_sakaluksexdrive
+
+```
+
+
+#### Sakaluk performance and orgasm
+```{r}
+
+hist_sakalukperformance <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = sakaluk_performanceorgasm
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Performance and Orgasm',
+    y = 'Frequency',
+    title = 'Performance and Orgasm (Sakaluk et al., 2014)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_sakalukperformance
+
+```
+
+
+#### Sakaluk player
+```{r}
+
+hist_sakalukplayer <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = sakaluk_player
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Player',
+    y = 'Frequency',
+    title = 'Player (Sakaluk et al., 2014)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_sakalukplayer
+
+```
+
+
+#### Sakaluk emotional sex
+```{r}
+
+hist_sakalukemotionalsex <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = sakaluk_emotionalsex
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Emotional Sex',
+    y = 'Frequency',
+    title = 'Emotional Sex (Sakaluk et al., 2014)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_sakalukemotionalsex
+
+```
+
+
+#### Sakaluk histogram grid
+```{r}
+
+histgrid_sakaluk <- plot_grid(hist_sakaluksexualstandards, hist_sakalukcomplexity, hist_sakaluksexdrive, hist_sakalukperformance, hist_sakalukplayer, hist_sakalukemotionalsex, nrow = 3)
+
+histgrid_sakaluk
+
+```
+
+
+### Seabrook
+
+#### Seabrook total
+```{r}
+
+hist_seabrooktotal <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = seabrook_total
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Total',
+    y = 'Frequency',
+    title = 'Sexual Scripts (Seabrook et al., 2016)'
+  ) +
+  theme_classic()
+
+hist_seabrooktotal
+
+```
+
+
+#### Seabrook courtship
+```{r}
+
+hist_seabrookcourtship <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = seabrook_courtship
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Courtship',
+    y = 'Frequency',
+    title = 'Courtship and Commitment (Seabrook et al., 2016)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_seabrookcourtship
+
+```
+
+
+#### Seabrook initiators
+```{r}
+
+hist_seabrookinitiators <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = seabrook_initiators
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Initiators',
+    y = 'Frequency',
+    title = 'Men as initiators (Seabrook et al., 2016)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_seabrookinitiators
+
+```
+
+
+#### Seabrook appearance
+```{r}
+
+hist_seabrookappearance <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = seabrook_appearance
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Appearance',
+    y = 'Frequency',
+    title = 'Women`s appearance (Seabrook et al., 2016)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_seabrookappearance
+
+```
+
+
+#### Seabrook double standards
+```{r}
+
+hist_seabrookdoublestandards <- 
+  ggplot(data_heteroscales,
+         aes(
+           x = seabrook_doublestandards
+         )) +
+  geom_histogram(
+    binwidth = .25,
+    color = "black",
+    fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c(1, 6),
+    breaks = 1:6
+  ) +
+  labs(
+    x = 'Double Standards',
+    y = 'Frequency',
+    title = 'Double Standards (Seabrook et al., 2016)'
+  ) +
+  theme_classic(
+    base_size = 8
+  )
+
+hist_seabrookdoublestandards
+
+```
+
+
+#### Seabrook histogram grid
+```{r}
+
+histgrid_seabrook <- plot_grid(hist_seabrookcourtship, hist_seabrookinitiators, hist_seabrookappearance, hist_seabrookdoublestandards, nrow = 2)
+
+histgrid_seabrook
+
+```
+
+
+### Krahé
+
+#### Histogram grid items
+```{r}
+
+krahe_scale <- filter(data_heteroscales[76:115])
+
+
+krahe_scale %>% 
+    pivot_longer(
+        cols = everything(),
+        names_to = "item",
+        values_to = "value"
+    ) %>% 
+  ggplot(.,
+         aes(
+           x = value
+         )) +
+  facet_wrap(
+    ~ item,
+    nrow = 5) +
+  geom_histogram(
+    binwidth = 1,
+    color = "black",
+    fill = "grey"
+  ) +
+  theme_classic(
+    base_size = 9.5
+  )
+
+```
+
+
+# Multivariate normality
+
+## Ammsa total
+```{r}
+
+# Mardia's test
+diagnostics_ammsa <- mvn(data_heteroscales[55:75],
+                           mvnTest = 'mardia',
+                           multivariateOutlierMethod = 'adj', # adjusted quantile method
+                           showOutliers = T,
+                           showNewData = T) # data without outliers
+
+diagnostics_ammsa$multivariateNormality # mvn, skewness and kurtosis
+
+
+# qqplot
+ggplot(data_heteroscales,
+        aes(
+          sample = ammsa_total
+        )) +
+geom_qq(
+  distribution = qnorm
+) +
+geom_qq_line(
+  distribution = qnorm
+) +
+theme_classic()
+
+
+# mahalanobis distances
+cov_ammsa <- cov(data_heteroscales[55:75]) # cov matrix
+
+colmeans_ammsa <- colMeans(data_heteroscales[55:75])
+
+mahal_ammsa <- mahalanobis(data_heteroscales[55:75], center = colmeans_ammsa, cov = cov_ammsa)
+
+mahal_p_ammsa <- pchisq(mahal_ammsa, df = ncol(data_heteroscales[55:75]), lower.tail = F)
+
+ID_ammsa <- 1:nrow(data_heteroscales[55:75])
+
+mahal_data_ammsa <- data.frame(ID_ammsa, mahal_ammsa, mahal_p_ammsa)
+
+arrange(mahal_data_ammsa, by = desc(mahal_ammsa))
+
+
+```
+
+
+## Sakaluk total
+```{r}
+
+# Mardia's test
+diagnostics_sakaluk <- mvn(data_heteroscales[1:32],
+                           mvnTest = 'mardia',
+                           multivariateOutlierMethod = 'adj', # adjusted quantile method
+                           showOutliers = T,
+                           showNewData = T) # data without outliers
+
+diagnostics_sakaluk$multivariateNormality # mvn, skewness and kurtosis
+
+
+# qqplot
+ggplot(data_heteroscales,
+        aes(
+          sample = sakaluk_total
+        )) +
+geom_qq(
+  distribution = qnorm
+) +
+geom_qq_line(
+  distribution = qnorm
+) +
+theme_classic()
+
+
+# mahalanobis distances
+cov_sakaluktotal <- cov(data_heteroscales[1:32]) # cov matrix
+
+colmeans_sakaluktotal <- colMeans(data_heteroscales[1:32])
+
+mahal_sakaluktotal <- mahalanobis(data_heteroscales[1:32], center = colmeans_sakaluktotal, cov = cov_sakaluktotal)
+
+mahal_p_sakaluktotal <- pchisq(mahal_sakaluktotal, df = ncol(data_heteroscales[1:32]), lower.tail = F)
+
+ID_sakaluktotal <- 1:nrow(data_heteroscales[1:32])
+
+mahal_data_sakaluktotal <- data.frame(ID_sakaluktotal, mahal_sakaluktotal, mahal_p_sakaluktotal)
+
+arrange(mahal_data_sakaluktotal, by = desc(mahal_sakaluktotal)) # arrange descending
+
+
+```
+
+
+## Seabrook total
+```{r}
+
+# Mardia's test
+diagnostics_seabrook <- mvn(data_heteroscales[33:54],
+                           mvnTest = 'mardia',
+                           multivariateOutlierMethod = 'adj', # adjusted quantile method
+                           showOutliers = T,
+                           showNewData = T) # data without outliers
+
+diagnostics_seabrook$multivariateNormality # mvn, skewness and kurtosis
+
+
+# qqplot
+ggplot(data_heteroscales,
+        aes(
+          sample = seabrook_total
+        )) +
+geom_qq(
+  distribution = qnorm
+) +
+geom_qq_line(
+  distribution = qnorm
+) +
+theme_classic()
+
+
+# mahalanobis distances
+cov_seabrooktotal <- cov(data_heteroscales[33:54]) # cov matrix
+
+colmeans_seabrooktotal <- colMeans(data_heteroscales[33:54])
+
+mahal_seabrooktotal <- mahalanobis(data_heteroscales[33:54], center = colmeans_seabrooktotal, cov = cov_seabrooktotal)
+
+mahal_p_seabrooktotal <- pchisq(mahal_seabrooktotal, df = ncol(data_heteroscales[33:54]), lower.tail = F)
+
+ID_seabrooktotal <- 1:nrow(data_heteroscales[33:54])
+
+mahal_data_seabrooktotal <- data.frame(ID_seabrooktotal, mahal_seabrooktotal, mahal_p_seabrooktotal)
+
+arrange(mahal_data_seabrooktotal, by = desc(mahal_seabrooktotal))
+
+
+```
+
+##########################################################################################

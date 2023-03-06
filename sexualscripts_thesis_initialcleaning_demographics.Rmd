@@ -1,0 +1,332 @@
+---
+title: "sexualscripts_thesis_initialcleaning_demographics"
+author: "Fanny Habacht"
+date: "2023-02-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+This code includes the initial dataset cleaning and demographics for my master thesis
+
+
+# Packages
+```{r}
+
+packages <- c('dplyr', 'ggplot2', 'tidyr', 'readr', 'jtools')
+
+lapply(packages, library, character.only = TRUE)
+
+```
+
+
+# Data preparation
+
+## Loading data
+```{r}
+
+data <- read_csv('data_sexualscript_raw.csv') # load raw data
+
+```
+
+
+## Initial cleaning
+```{r}
+
+data_clean <- data %>%
+  slice(-1, -2) %>% # remove first two rows (because they are not actual responses)
+  filter(Progress == 100) %>% # removing unfinished surveys
+  mutate(id = 1:nrow(.)) %>% # adding id column
+  select('id', 'Duration (in seconds)', 18:178) %>% # selecting only relevant columns
+  rename('duration' = 'Duration (in seconds)') # renaming duration column
+
+```
+
+
+## Character to numeric values
+```{r}
+
+sapply(data_clean, class) # check the class of each column
+
+data_clean[4:162] <- sapply(data_clean[4:162],as.numeric) # change column 4 to 162 to numeric
+
+```
+
+
+## Coalescing the gendered versions of the Krahé et al scale
+```{r}
+
+krahe_cols <- data_clean %>% # pick the relevant columns and define them as a separate data frame
+  select(
+    id,
+    starts_with("arranged"),
+    starts_with("situation"),
+    starts_with("sex_"),
+    starts_with("sexlocation"),
+    starts_with("contraception"),
+    starts_with("metbefore"),
+    starts_with("knownbefore"),
+    starts_with("substances"),
+    starts_with("drunkstoned"),
+    starts_with("consentboy"),
+    starts_with("consentgirl"),
+    starts_with("afterfeeling"),
+    starts_with("outlook")
+  ) %>% 
+  pivot_longer( # combine all columns to one long column with names and one with the values
+    cols      = colnames(select(., -id)),
+    names_to  = "variable",
+    values_to = "value",
+    values_drop_na = TRUE 
+  )
+
+
+krahe_cols$variable <- gsub( # remove a space from the names
+  pattern = " ", 
+  replacement = "",
+  x = krahe_cols$variable)
+
+
+krahe_cols$variable <- gsub( # remove the _m from the names
+  pattern = "_m", 
+  replacement = "",
+  x = krahe_cols$variable)
+
+
+krahe_cols <- krahe_cols %>% # split the columns up again
+  pivot_wider(
+    id_cols     = "id",
+    names_from  = "variable",
+    values_from = "value"
+  )
+
+
+data_clean <- data_clean %>% # remove all columns from the original data set to avoid duplication
+  select(
+    -starts_with("arranged"),
+    -starts_with("situation"),
+    -starts_with("sex_"),
+    -starts_with("sexlocation"),
+    -starts_with("contraception"),
+    -starts_with("metbefore"),
+    -starts_with("knownbefore"),
+    -starts_with("substances"),
+    -starts_with("drunkstoned"),
+    -starts_with("consentboy"),
+    -starts_with("consentgirl"),
+    -starts_with("afterfeeling"),
+    -starts_with("outlook")
+  ) %>% 
+  left_join(krahe_cols, by = "id") # join the two data frames together after id (to match answer and person)
+
+```
+
+
+## Removing empty surveys
+```{r}
+
+NONBINARY <- 3
+NOTSAID <- 4
+HETERO <- 1
+OTHER <- 3
+
+
+emptyrows <- data_clean %>% 
+  filter(
+    gender == NONBINARY & sexuality != HETERO | gender == NOTSAID & sexuality != HETERO | gender == NONBINARY & nb_gender_attraction == OTHER | gender == NOTSAID & nb_gender_attraction == OTHER)
+
+
+data_clean <- data_clean %>% 
+  anti_join(emptyrows)
+
+```
+
+
+# Saving cleaned dataset
+```{r}
+
+write.csv(data_clean, 'data_sexualscript_clean.csv', row.names = FALSE) # safe initially cleaned dataset
+
+```
+
+
+################################################################################
+
+
+# Descriptive Analyses
+
+## Demographics
+
+### Age
+```{r}
+
+# function for calculating the statistical mode
+mode <- function(codes){
+  which.max(tabulate(codes))
+} 
+
+
+# summary of age
+data_clean %>% 
+  summarise(
+    mean = mean(age, na.rm = T), 
+    sd = sd(age, na.rm = T), 
+    median = median(age, na.rm = T),
+    mode = mode(age),
+    min = min(age, na.rm = T), 
+    max = max(age, na.rm = T)
+  )
+
+
+# summary of age, grouped by gender
+data_clean %>% 
+  group_by(gender) %>% 
+  summarise(
+    mean = mean(age, na.rm = T), 
+    sd = sd(age, na.rm = T), 
+    median = median(age, na.rm = T),
+    mode = mode(age),
+    min = min(age, na.rm = T), 
+    max = max(age, na.rm = T)
+  )
+
+```
+
+#### Age frequency distributions
+```{r}
+
+# histogram of age distribution
+
+hist_age <- 
+  ggplot(data_clean,
+       aes(
+         x = age
+       )) +
+  geom_histogram(
+    binwidth = 5, 
+    fill = 'grey', 
+    color = 'black'
+  ) +
+  labs(
+    y = 'Frequency',
+    x = 'Age',
+    title = 'Age distribution'
+  ) +
+  scale_x_continuous(
+    limits = c(18, 98),
+    breaks = seq(18, 98, 5) # from 18 to 88 in steps of 5
+  ) +
+  theme_classic()
+
+
+hist_age
+
+
+# histrogram of age distribution by gender
+
+genderlabels <- as_labeller(c ('1' = 'male', '2' = 'female', '3' = 'non-binary', '4' = 'prefer not to say'))
+
+
+hist_agebygender <- 
+  ggplot(data_clean,
+       aes(
+         x = age
+       )) +
+  facet_wrap(
+    ~ gender,
+    labeller = genderlabels,
+    strip.position = 'bottom'
+    ) +
+  geom_histogram(
+    binwidth = 5, 
+    fill = 'grey', 
+    color = 'black'
+  ) +
+  labs(
+    y = 'Frequency',
+    x = 'Age', 
+    title = 'Age distribution by gender'
+  ) +
+  scale_x_continuous(
+    limits = c(18, 98),
+    breaks = seq(18, 98, 5)
+  ) +
+  theme_classic()
+
+
+hist_agebygender
+
+```
+
+
+### Gender
+
+1 = male
+2 = female
+3 = non-binary / third gender
+4 = prefer not to say
+
+```{r}
+
+table(data_clean$gender) # absolute values
+
+prop.table(table(data_clean$gender))*100 # percentages
+
+```
+
+
+### Sexuality
+
+1 = heterosexual
+2 = homosexual
+3 = bisexual
+4 = other
+5 = prefer not to say
+
+```{r}
+
+table(data_clean$sexuality) # absolute values
+
+prop.table(table(data_clean$sexuality))*100 # percentages
+
+```
+
+
+### Relationship Style
+
+1 = monogamous
+2 = consensually non-monogamous
+3 = other
+
+```{r}
+
+table(data_clean$monogamy) # absolute values
+
+prop.table(table(data_clean$monogamy))*100 # percentages
+
+```
+
+
+### Straight non-binary gender attraction
+
+1 = male
+2 = female
+
+```{r}
+
+table(data_clean$nb_gender_attraction) # absolute values
+
+prop.table(table(data_clean$nb_gender_attraction))*100 # percentages
+
+```
+
+################################################################################
+
+
+
+
+
+
