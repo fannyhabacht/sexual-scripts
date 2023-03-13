@@ -1,5 +1,5 @@
 ---
-title: "sexualscripts_thesis_initialcleaning_demographics"
+title: "Sexual Scripts Master Thesis Initial Cleaning & Demographics"
 author: "Fanny Habacht"
 date: "2023-02-21"
 output: html_document
@@ -16,7 +16,7 @@ This code includes the initial dataset cleaning and demographics for my master t
 # Packages
 ```{r}
 
-packages <- c('dplyr', 'ggplot2', 'tidyr', 'readr', 'jtools')
+packages <- c('dplyr', 'ggplot2', 'tidyr', 'readr', 'jtools', 'stringr')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -40,7 +40,38 @@ data_clean <- data %>%
   slice(-1, -2) %>% # remove first two rows (because they are not actual responses)
   filter(Progress == 100) %>% # removing unfinished surveys
   mutate(id = 1:nrow(.)) %>% # adding id column
-  select('id', 'Duration (in seconds)', 18:178) %>% # selecting only relevant columns
+  select(
+    'id', 
+    'Duration (in seconds)',
+    'age',
+    'gender',
+    'sexuality',
+    'monogamy',
+    'nb_gender_attraction',
+    starts_with('sexualstandards'), 
+    starts_with('complexity'), 
+    starts_with('sexdrive'), 
+    starts_with('performanceandorgasm'), 
+    starts_with('player'), 
+    starts_with('emotionalsex'), 
+    starts_with('courtship'), 
+    starts_with('initiators'), 
+    starts_with('appearance'), 
+    starts_with('doublestandards'), 
+    starts_with('ammsa'), 
+    starts_with('arranged'), 
+    starts_with('situation'), 
+    starts_with('sex'), 
+    starts_with('sexlocation'), 
+    starts_with('contraception'), 
+    starts_with('metbefore'), 
+    starts_with('knownbefore'), 
+    starts_with('substances'), 
+    starts_with('drunkstoned'), 
+    starts_with('consent'), 
+    starts_with('afterfeeling'), 
+    starts_with('outlook')
+    ) %>%
   rename('duration' = 'Duration (in seconds)') # renaming duration column
 
 ```
@@ -51,7 +82,17 @@ data_clean <- data %>%
 
 sapply(data_clean, class) # check the class of each column
 
-data_clean[4:162] <- sapply(data_clean[4:162],as.numeric) # change column 4 to 162 to numeric
+
+data_clean <- data_clean %>% mutate_if(is.character, as.numeric)
+
+
+sapply(data_clean, class)
+
+
+# remove accidental spaces from variable names
+
+names(data_clean) <- str_replace_all(names(data_clean), c(" " = ""))
+
 
 ```
 
@@ -128,15 +169,15 @@ data_clean <- data_clean %>% # remove all columns from the original data set to 
 ## Removing empty surveys
 ```{r}
 
-NONBINARY <- 3
-NOTSAID <- 4
-HETERO <- 1
-OTHER <- 3
+nonbinary <- 3
+notsaid <- 4
+hetero <- 1
+other <- 3
 
 
 emptyrows <- data_clean %>% 
   filter(
-    gender == NONBINARY & sexuality != HETERO | gender == NOTSAID & sexuality != HETERO | gender == NONBINARY & nb_gender_attraction == OTHER | gender == NOTSAID & nb_gender_attraction == OTHER)
+    gender == nonbinary & sexuality != hetero | gender == notsaid & sexuality != hetero | gender == nonbinary & nb_gender_attraction == other | gender == notsaid & nb_gender_attraction == other)
 
 
 data_clean <- data_clean %>% 
@@ -158,7 +199,7 @@ write.csv(data_clean, 'data_sexualscript_clean.csv', row.names = FALSE) # safe i
 
 # Descriptive Analyses
 
-## Demographics
+## Demographics whole sample
 
 ### Age
 ```{r}
@@ -172,25 +213,28 @@ mode <- function(codes){
 # summary of age
 data_clean %>% 
   summarise(
-    mean = mean(age, na.rm = T), 
-    sd = sd(age, na.rm = T), 
-    median = median(age, na.rm = T),
+    mean = mean(age, na.rm = TRUE), 
+    sd = sd(age, na.rm = TRUE), 
+    median = median(age, na.rm = TRUE),
     mode = mode(age),
-    min = min(age, na.rm = T), 
-    max = max(age, na.rm = T)
+    min = min(age, na.rm = TRUE), 
+    max = max(age, na.rm = TRUE)
   )
+```
 
+
+```{r}
 
 # summary of age, grouped by gender
 data_clean %>% 
   group_by(gender) %>% 
   summarise(
-    mean = mean(age, na.rm = T), 
-    sd = sd(age, na.rm = T), 
-    median = median(age, na.rm = T),
+    mean = mean(age, na.rm = TRUE), 
+    sd = sd(age, na.rm = TRUE), 
+    median = median(age, na.rm = TRUE),
     mode = mode(age),
-    min = min(age, na.rm = T), 
-    max = max(age, na.rm = T)
+    min = min(age, na.rm = TRUE), 
+    max = max(age, na.rm = TRUE)
   )
 
 ```
@@ -206,7 +250,7 @@ hist_age <-
          x = age
        )) +
   geom_histogram(
-    binwidth = 5, 
+    binwidth = 2, 
     fill = 'grey', 
     color = 'black'
   ) +
@@ -216,14 +260,22 @@ hist_age <-
     title = 'Age distribution'
   ) +
   scale_x_continuous(
-    limits = c(18, 98),
-    breaks = seq(18, 98, 5) # from 18 to 88 in steps of 5
+    limits = c(18, max(data_clean$age)),
+    breaks = seq(18, max(data_clean$age), 5)
   ) +
+  scale_y_continuous(
+    limits = c(0, max(data_clean$age)),
+    breaks = seq(0, max(data_clean$age), 10)
+  )+
   theme_classic()
 
 
 hist_age
 
+```
+
+
+```{r}
 
 # histrogram of age distribution by gender
 
@@ -241,7 +293,7 @@ hist_agebygender <-
     strip.position = 'bottom'
     ) +
   geom_histogram(
-    binwidth = 5, 
+    binwidth = 2, 
     fill = 'grey', 
     color = 'black'
   ) +
@@ -251,9 +303,13 @@ hist_agebygender <-
     title = 'Age distribution by gender'
   ) +
   scale_x_continuous(
-    limits = c(18, 98),
-    breaks = seq(18, 98, 5)
+    limits = c(18, max(data_clean$age)),
+    breaks = seq(18, max(data_clean$age), 5)
   ) +
+  scale_y_continuous(
+    limits = c(0, max(data_clean$age)),
+    breaks = seq(0, max(data_clean$age), 20)
+  )+
   theme_classic()
 
 
@@ -322,6 +378,161 @@ table(data_clean$nb_gender_attraction) # absolute values
 prop.table(table(data_clean$nb_gender_attraction))*100 # percentages
 
 ```
+
+
+## Demographics hetero male/female
+```{r}
+
+hetero <- 1
+nonbinary <- 3
+notsaid <- 4
+
+
+data_nothetero <- data_clean %>% 
+  filter(sexuality != hetero)
+
+data_onlyhetero <- data_clean %>% 
+  anti_join(data_nothetero)
+
+data_notmaleorfemale <- data_onlyhetero %>% 
+  filter(gender == nonbinary | gender == notsaid)
+
+data_onlyhetero_malefemale <- data_onlyhetero %>% 
+  anti_join(data_notmaleorfemale)
+
+```
+
+
+### Age hetero male/female
+```{r}
+
+# summary of age hetero male/female
+
+data_onlyhetero_malefemale %>% 
+  summarise(
+    mean = mean(age, na.rm = TRUE), 
+    sd = sd(age, na.rm = TRUE), 
+    median = median(age, na.rm = TRUE),
+    mode = mode(age),
+    min = min(age, na.rm = TRUE), 
+    max = max(age, na.rm = TRUE)
+  )
+
+```
+
+
+```{r}
+
+# summary of age, grouped by gender (hetero male/female)
+
+data_onlyhetero_malefemale %>% 
+  group_by(gender) %>% 
+  summarise(
+    mean = mean(age, na.rm = TRUE), 
+    sd = sd(age, na.rm = TRUE), 
+    median = median(age, na.rm = TRUE),
+    mode = mode(age),
+    min = min(age, na.rm = TRUE), 
+    max = max(age, na.rm = TRUE)
+  )
+
+```
+
+
+#### Age frequency distributions hetero male/female
+```{r}
+
+# histogram of age distribution hetero male/female
+
+hist_age_heteromalefemale <- 
+  ggplot(data_onlyhetero_malefemale,
+       aes(
+         x = age
+       )) +
+  geom_histogram(
+    binwidth = 2, 
+    fill = 'grey', 
+    color = 'black'
+  ) +
+  labs(
+    y = 'Frequency',
+    x = 'Age',
+    title = 'Age distribution hetero male/female'
+  ) +
+  scale_x_continuous(
+    limits = c(18, max(data_onlyhetero_malefemale$age)),
+    breaks = seq(18, max(data_onlyhetero_malefemale$age), 5)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 50),
+    breaks = seq(0, 50, 10)
+  )+
+  theme_classic()
+
+
+hist_age_heteromalefemale
+
+```
+
+
+```{r}
+
+# histrogram of age distribution by gender hetero male/female
+
+genderlabels <- as_labeller( c('1' = 'male', '2' = 'female'))
+
+
+hist_agebygender_heteromalefemale <- 
+  ggplot(data_onlyhetero_malefemale,
+       aes(
+         x = age
+       )) +
+  facet_wrap(
+    ~ gender,
+    labeller = genderlabels,
+    strip.position = 'bottom'
+    ) +
+  geom_histogram(
+    binwidth = 2, 
+    fill = 'grey', 
+    color = 'black'
+  ) +
+  labs(
+    y = 'Frequency',
+    x = 'Age', 
+    title = 'Age distribution by gender, hetero'
+  ) +
+  scale_x_continuous(
+    limits = c(18, max(data_onlyhetero_malefemale$age)),
+    breaks = seq(18, max(data_onlyhetero_malefemale$age), 10)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 50),
+    breaks = seq(0, 50, 10)
+  ) +
+  theme_classic()
+
+
+hist_agebygender_heteromalefemale
+
+```
+
+
+### Relationship style hetero male/female
+
+1 = monogamous
+2 = consensually non-monogamous
+3 = other
+
+```{r}
+
+table(data_onlyhetero_malefemale$monogamy) # absolute values
+
+
+prop.table(table(data_onlyhetero_malefemale$monogamy))*100 # percentages
+
+```
+
 
 ################################################################################
 

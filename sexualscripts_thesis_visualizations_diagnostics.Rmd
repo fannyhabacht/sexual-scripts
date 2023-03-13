@@ -1,5 +1,5 @@
 ---
-title: "sexualscripts_thesis_visualizations_diagnostics"
+title: "Sexual Scripts Master Thesis Visualizations & Diagnostics"
 author: "Fanny Habacht"
 date: "2023-02-21"
 output: html_document
@@ -16,7 +16,7 @@ This code includes preparing the dataset further for the main analysis (total sc
 # Packages
 ```{r}
 
-packages <- c('readr', 'dplyr', 'ggplot2', 'MVN', 'psych', 'cowplot')
+packages <- c('tidyr', 'readr', 'dplyr', 'ggplot2', 'MVN', 'psych', 'cowplot')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -46,24 +46,24 @@ data_clean[ , reverse_cols] = 7 - data_clean[ , reverse_cols]
 ## Removing participants not hetero and not male/female
 ```{r}
 
-HETERO <- 1
-NONBINARY <- 3
-NOTSAID <- 4
+hetero <- 1
+nonbinary <- 3
+notsaid <- 4
+
+# only non-binary participants
+data_nonbinary <- data_clean %>% 
+  filter(gender == nonbinary)
 
 
+# only hetero and male/female
 data_nothetero <- data_clean %>% 
-  filter(sexuality != HETERO)
+  filter(sexuality != hetero) # only not hetero
 
-data_onlyhetero <- data_clean %>% 
+data_onlyhetero <- data_clean %>%
   anti_join(data_nothetero)
 
-
-data_nonbinary <- data_clean %>% 
-  filter(gender == NONBINARY)
-
-
 data_notmaleorfemale <- data_onlyhetero %>% 
-  filter(gender == NONBINARY | gender == NOTSAID)
+  filter(gender == nonbinary | gender == notsaid) # only male/female
 
 data_onlyhetero_malefemale <- data_onlyhetero %>% 
   anti_join(data_notmaleorfemale)
@@ -75,7 +75,7 @@ data_onlyhetero_malefemale <- data_onlyhetero %>%
 ```{r}
 
 data_heteroscales <- data_onlyhetero_malefemale %>% 
-  select(9:123)
+  select('id', starts_with('sexualstandards'), starts_with('complexity'), starts_with('sexdrive'), starts_with('performanceandorgasm'), starts_with('player'), starts_with('emotionalsex'), starts_with('courtship'), starts_with('initiators'), starts_with('appearance'), starts_with('doublestandards'), starts_with('ammsa'), starts_with('arranged'), starts_with('situation'), starts_with('sex'), starts_with('sexlocation'), starts_with('contraception'), 'metbefore', 'knownbefore', starts_with('substances'), starts_with('drunkstoned'), starts_with('consent'), starts_with('afterfeeling'), starts_with('outlook')) 
 
 ```
 
@@ -99,43 +99,53 @@ data_heteroscales <- data_heteroscales %>%
   mutate(
     ammsa_total = rowMeans(
       select(data_heteroscales, starts_with('ammsa')),
-      na.rm = F),
+      na.rm = FALSE),
     sakaluk_total = rowMeans(
-      select(data_heteroscales, 1:32),
-      na.rm = F), 
+      select(data_heteroscales,
+             starts_with('sexualstandards'),
+             starts_with('complexity'),
+             starts_with('sexdrive'),
+             starts_with('performanceandorgasm'),
+             starts_with('player'),
+             starts_with('emotionalsex')),
+        na.rm = FALSE), 
     sakaluk_sexualstandards = rowMeans(
       select(data_heteroscales, starts_with('sexualstandards')),
-      na.rm = F),
+      na.rm = FALSE),
     sakaluk_complexity = rowMeans(
       select(data_heteroscales, starts_with('complexity')),
-      na.rm = F),
+      na.rm = FALSE),
     sakaluk_sexdrive = rowMeans(
       select(data_heteroscales, starts_with('sexdrive')),
-      na.rm = F),
+      na.rm = FALSE),
     sakaluk_performanceorgasm = rowMeans(
       select(data_heteroscales, starts_with('performanceandorgasm')),
-      na.rm = F),
+      na.rm = FALSE),
     sakaluk_player = rowMeans(
       select(data_heteroscales, starts_with('player')),
-      na.rm = F),
+      na.rm = FALSE),
     sakaluk_emotionalsex = rowMeans(
       select(data_heteroscales, starts_with('emotionalsex')),
-      na.rm = F),
+      na.rm = FALSE),
     seabrook_total = rowMeans(
-      select(data_heteroscales, 33:54),
-      na.rm = F),
+      select(data_heteroscales,
+             starts_with('courtship'), 
+             starts_with('initiators'), 
+             starts_with('appearance'), 
+             starts_with('doublestandards')),
+      na.rm = FALSE),
     seabrook_courtship = rowMeans(
       select(data_heteroscales, starts_with('courtship')),
-      na.rm = F),
+      na.rm = FALSE),
     seabrook_initiators = rowMeans(
       select(data_heteroscales, starts_with('initiators')),
-      na.rm = F),
+      na.rm = FALSE),
     seabrook_appearance = rowMeans(
       select(data_heteroscales, starts_with('appearance')),
-      na.rm = F),
+      na.rm = FALSE),
     seabrook_doublestandards = rowMeans(
       select(data_heteroscales, starts_with('doublestandards')),
-      na.rm = F),
+      na.rm = FALSE),
   )
 
 ```
@@ -145,13 +155,13 @@ data_heteroscales <- data_heteroscales %>%
 ```{r}
 
 # dataset only scales hetero male/female
-write.csv(data_heteroscales, 'data_sexualscript_heteroscales.csv', row.names = F)
+write.csv(data_heteroscales, 'data_sexualscript_heteroscales.csv', row.names = FALSE)
 
 # dataset hetero male/female
-write.csv(data_onlyhetero_malefemale, 'data_sexualscript_hetero_malefemale.csv', row.names = F)
+write.csv(data_onlyhetero_malefemale, 'data_sexualscript_hetero_malefemale.csv', row.names = FALSE)
 
 # dataset only nonbinary
-write.csv(data_nonbinary, 'data_sexualscript_nonbinary.csv', row.names = F)
+write.csv(data_nonbinary, 'data_sexualscript_nonbinary.csv', row.names = FALSE)
 
 ```
 
@@ -237,6 +247,10 @@ hist_sakaluksexualstandards <-
     limits = c(1, 6),
     breaks = 1:6
   ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
+  ) +
   labs(
     x = 'Sexual Standards',
     y = 'Frequency',
@@ -267,6 +281,10 @@ hist_sakalukcomplexity <-
   scale_x_continuous(
     limits = c(1, 6),
     breaks = 1:6
+  ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
   ) +
   labs(
     x = 'Simplicity',
@@ -299,6 +317,10 @@ hist_sakaluksexdrive <-
     limits = c(1, 6),
     breaks = 1:6
   ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
+  ) +
   labs(
     x = 'Sex Drive',
     y = 'Frequency',
@@ -329,6 +351,10 @@ hist_sakalukperformance <-
   scale_x_continuous(
     limits = c(1, 6),
     breaks = 1:6
+  ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
   ) +
   labs(
     x = 'Performance and Orgasm',
@@ -361,6 +387,10 @@ hist_sakalukplayer <-
     limits = c(1, 6),
     breaks = 1:6
   ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
+  ) +
   labs(
     x = 'Player',
     y = 'Frequency',
@@ -391,6 +421,10 @@ hist_sakalukemotionalsex <-
   scale_x_continuous(
     limits = c(1, 6),
     breaks = 1:6
+  ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
   ) +
   labs(
     x = 'Emotional Sex',
@@ -435,6 +469,10 @@ hist_seabrooktotal <-
     limits = c(1, 6),
     breaks = 1:6
   ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
+  ) +
   labs(
     x = 'Total',
     y = 'Frequency',
@@ -463,6 +501,10 @@ hist_seabrookcourtship <-
   scale_x_continuous(
     limits = c(1, 6),
     breaks = 1:6
+  ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
   ) +
   labs(
     x = 'Courtship',
@@ -495,6 +537,10 @@ hist_seabrookinitiators <-
     limits = c(1, 6),
     breaks = 1:6
   ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
+  ) +
   labs(
     x = 'Initiators',
     y = 'Frequency',
@@ -525,6 +571,10 @@ hist_seabrookappearance <-
   scale_x_continuous(
     limits = c(1, 6),
     breaks = 1:6
+  ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
   ) +
   labs(
     x = 'Appearance',
@@ -557,6 +607,10 @@ hist_seabrookdoublestandards <-
     limits = c(1, 6),
     breaks = 1:6
   ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 20, 30, 40, 50)
+  ) +
   labs(
     x = 'Double Standards',
     y = 'Frequency',
@@ -586,15 +640,30 @@ histgrid_seabrook
 #### Histogram grid items
 ```{r}
 
-krahe_scale <- filter(data_heteroscales[76:115])
-
+krahe_scale <- data_heteroscales %>%
+  select(
+    starts_with("arranged"),
+    starts_with("situation"),
+    starts_with("sex_"),
+    starts_with("sexlocation"),
+    starts_with("contraception"),
+    starts_with("metbefore"),
+    starts_with("knownbefore"),
+    starts_with("substances"),
+    starts_with("drunkstoned"),
+    starts_with("consentboy"),
+    starts_with("consentgirl"),
+    starts_with("afterfeeling"),
+    starts_with("outlook")
+  )
+    
 
 krahe_scale %>% 
-    pivot_longer(
+  pivot_longer(
         cols = everything(),
         names_to = "item",
         values_to = "value"
-    ) %>% 
+        ) %>% 
   ggplot(.,
          aes(
            x = value
@@ -603,9 +672,22 @@ krahe_scale %>%
     ~ item,
     nrow = 5) +
   geom_histogram(
-    binwidth = 1,
+    binwidth = 0.25,
     color = "black",
     fill = "grey"
+  ) +
+  scale_x_continuous(
+    limits = c (1, 5),
+    breaks = 1:5
+  ) +
+  scale_y_continuous(
+    limits = c(0,50),
+    breaks = c(10, 30, 50)
+  ) +
+  labs(
+    x = 'Value',
+    y = 'Frequency',
+    title = 'Sexual Scripts (Krahé et al., 2007)'
   ) +
   theme_classic(
     base_size = 9.5
@@ -619,12 +701,16 @@ krahe_scale %>%
 ## Ammsa total
 ```{r}
 
+ammsa_scale <- data_onlyhetero_malefemale %>% 
+  select(starts_with('ammsa'))
+  
+
 # Mardia's test
-diagnostics_ammsa <- mvn(data_heteroscales[55:75],
-                           mvnTest = 'mardia',
-                           multivariateOutlierMethod = 'adj', # adjusted quantile method
-                           showOutliers = T,
-                           showNewData = T) # data without outliers
+diagnostics_ammsa <- mvn(ammsa_scale,
+                         mvnTest = 'mardia',
+                         multivariateOutlierMethod = 'adj', # adjusted quantile method
+                         showOutliers = TRUE,
+                         showNewData = TRUE) # data without outliers
 
 diagnostics_ammsa$multivariateNormality # mvn, skewness and kurtosis
 
@@ -644,15 +730,15 @@ theme_classic()
 
 
 # mahalanobis distances
-cov_ammsa <- cov(data_heteroscales[55:75]) # cov matrix
+cov_ammsa <- cov(ammsa_scale) # cov matrix
 
-colmeans_ammsa <- colMeans(data_heteroscales[55:75])
+colmeans_ammsa <- colMeans(ammsa_scale)
 
-mahal_ammsa <- mahalanobis(data_heteroscales[55:75], center = colmeans_ammsa, cov = cov_ammsa)
+mahal_ammsa <- mahalanobis(ammsa_scale, center = colmeans_ammsa, cov = cov_ammsa)
 
-mahal_p_ammsa <- pchisq(mahal_ammsa, df = ncol(data_heteroscales[55:75]), lower.tail = F)
+mahal_p_ammsa <- pchisq(mahal_ammsa, df = ncol(ammsa_scale), lower.tail = FALSE)
 
-ID_ammsa <- 1:nrow(data_heteroscales[55:75])
+ID_ammsa <- 1:nrow(ammsa_scale)
 
 mahal_data_ammsa <- data.frame(ID_ammsa, mahal_ammsa, mahal_p_ammsa)
 
@@ -665,17 +751,30 @@ arrange(mahal_data_ammsa, by = desc(mahal_ammsa))
 ## Sakaluk total
 ```{r}
 
+sakaluk_scale <- data_onlyhetero_malefemale %>% 
+  select(
+    starts_with('sexualstandards'), 
+    starts_with('complexity'), 
+    starts_with('sexdrive'), 
+    starts_with('performanceandorgasm'), 
+    starts_with('player'), 
+    starts_with('emotionalsex')
+  )
+
+
 # Mardia's test
-diagnostics_sakaluk <- mvn(data_heteroscales[1:32],
+
+diagnostics_sakaluk <- mvn(sakaluk_scale,
                            mvnTest = 'mardia',
                            multivariateOutlierMethod = 'adj', # adjusted quantile method
-                           showOutliers = T,
-                           showNewData = T) # data without outliers
+                           showOutliers = TRUE,
+                           showNewData = TRUE) # data without outliers
 
 diagnostics_sakaluk$multivariateNormality # mvn, skewness and kurtosis
 
 
 # qqplot
+
 ggplot(data_heteroscales,
         aes(
           sample = sakaluk_total
@@ -690,15 +789,16 @@ theme_classic()
 
 
 # mahalanobis distances
-cov_sakaluktotal <- cov(data_heteroscales[1:32]) # cov matrix
 
-colmeans_sakaluktotal <- colMeans(data_heteroscales[1:32])
+cov_sakaluktotal <- cov(sakaluk_scale) # cov matrix
 
-mahal_sakaluktotal <- mahalanobis(data_heteroscales[1:32], center = colmeans_sakaluktotal, cov = cov_sakaluktotal)
+colmeans_sakaluktotal <- colMeans(sakaluk_scale)
 
-mahal_p_sakaluktotal <- pchisq(mahal_sakaluktotal, df = ncol(data_heteroscales[1:32]), lower.tail = F)
+mahal_sakaluktotal <- mahalanobis(sakaluk_scale, center = colmeans_sakaluktotal, cov = cov_sakaluktotal)
 
-ID_sakaluktotal <- 1:nrow(data_heteroscales[1:32])
+mahal_p_sakaluktotal <- pchisq(mahal_sakaluktotal, df = ncol(sakaluk_scale), lower.tail = FALSE)
+
+ID_sakaluktotal <- 1:nrow(sakaluk_scale)
 
 mahal_data_sakaluktotal <- data.frame(ID_sakaluktotal, mahal_sakaluktotal, mahal_p_sakaluktotal)
 
@@ -711,17 +811,28 @@ arrange(mahal_data_sakaluktotal, by = desc(mahal_sakaluktotal)) # arrange descen
 ## Seabrook total
 ```{r}
 
+seabrook_scale <- data_onlyhetero_malefemale %>% 
+  select(
+    starts_with('courtship'), 
+    starts_with('initiators'), 
+    starts_with('appearance'), 
+    starts_with('doublestandards')
+  )
+
+
 # Mardia's test
-diagnostics_seabrook <- mvn(data_heteroscales[33:54],
+
+diagnostics_seabrook <- mvn(seabrook_scale,
                            mvnTest = 'mardia',
                            multivariateOutlierMethod = 'adj', # adjusted quantile method
-                           showOutliers = T,
-                           showNewData = T) # data without outliers
+                           showOutliers = TRUE,
+                           showNewData = TRUE) # data without outliers
 
 diagnostics_seabrook$multivariateNormality # mvn, skewness and kurtosis
 
 
 # qqplot
+
 ggplot(data_heteroscales,
         aes(
           sample = seabrook_total
@@ -736,15 +847,16 @@ theme_classic()
 
 
 # mahalanobis distances
-cov_seabrooktotal <- cov(data_heteroscales[33:54]) # cov matrix
 
-colmeans_seabrooktotal <- colMeans(data_heteroscales[33:54])
+cov_seabrooktotal <- cov(seabrook_scale) # cov matrix
 
-mahal_seabrooktotal <- mahalanobis(data_heteroscales[33:54], center = colmeans_seabrooktotal, cov = cov_seabrooktotal)
+colmeans_seabrooktotal <- colMeans(seabrook_scale)
 
-mahal_p_seabrooktotal <- pchisq(mahal_seabrooktotal, df = ncol(data_heteroscales[33:54]), lower.tail = F)
+mahal_seabrooktotal <- mahalanobis(seabrook_scale, center = colmeans_seabrooktotal, cov = cov_seabrooktotal)
 
-ID_seabrooktotal <- 1:nrow(data_heteroscales[33:54])
+mahal_p_seabrooktotal <- pchisq(mahal_seabrooktotal, df = ncol(seabrook_scale), lower.tail = FALSE)
+
+ID_seabrooktotal <- 1:nrow(seabrook_scale)
 
 mahal_data_seabrooktotal <- data.frame(ID_seabrooktotal, mahal_seabrooktotal, mahal_p_seabrooktotal)
 
@@ -753,4 +865,7 @@ arrange(mahal_data_seabrooktotal, by = desc(mahal_seabrooktotal))
 
 ```
 
+
 ##########################################################################################
+
+
