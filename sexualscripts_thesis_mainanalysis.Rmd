@@ -1,0 +1,1176 @@
+---
+title: "Sexual Scripts Master Thesis Main Analysis"
+author: "Fanny Habacht"
+date: "2023-03-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+This code includes the main analysis of my master thesis, including factor analyses and network models.
+
+
+# Packages
+```{r}
+
+packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'igraph', 'IsingSampler', 'psychonetrics', 'EGAnet')
+
+lapply(packages, library, character.only = TRUE)
+
+```
+
+
+# Data
+```{r}
+
+data <- read_csv('data_sexualscript_hetero_malefemale.csv')
+
+
+data_hetero_malefemale <- data %>% 
+  select(
+    -'consent',
+    -'duration',
+    -'age',
+    -'sexuality',
+    -'monogamy',
+    -'nb_gender_attraction'
+  )
+
+
+# missing values
+
+sum(
+  is.na(data_hetero_malefemale)
+)
+
+
+# check the class of each column
+
+sapply(data_hetero_malefemale, class) 
+
+```
+
+
+
+# Factor Analyses
+
+## Ammsa measurement model
+```{r}
+
+# model specification
+
+ammsa_cfa <- ('
+                
+                ammsa =~ ammsa_1 + ammsa_2 + ammsa_3 + ammsa_4 + ammsa_5 + ammsa_6 + ammsa_7 + ammsa_8 + ammsa_9 + ammsa_10 + ammsa_11 + ammsa_12 + ammsa_13 + ammsa_14 + ammsa_15 + ammsa_16 + ammsa_17 + ammsa_18 + ammsa_19 + ammsa_20 + ammsa_21
+                
+                ')
+
+
+# model fitting
+
+if (!file.exists('./rda/ammsa_cfa_fit.rda')) {
+  
+  ammsa_cfa_fit <- cfa(
+    model = ammsa_cfa,
+    data = data_hetero_malefemale,
+    se = 'bootstrap',
+    bootstrap = 5000,
+    meanstructure = TRUE
+    )
+  
+  save(ammsa_cfa_fit, file = './rda/ammsa_cfa_fit.rda')
+  
+} else {
+  
+  load('./rda/ammsa_cfa_fit.rda')
+  
+}
+
+# summary of fit
+
+summary(ammsa_cfa_fit, fit.measures = TRUE, standardize = TRUE)
+
+
+```
+
+
+### Ammsa measurement model visualizations
+```{r}
+
+table_ammsa_cfa_fit <- semTable(
+  ammsa_cfa_fit, 
+  file = './tables/table_ammsa_cfa_fit',
+  paramSets = c('loadings', 'slopes', 'intercepts', 'residualvariances'), 
+  columns = c(est = "Estimate", se = "SE", p = "p"),
+  fits = c("chisq", "cfi", "tli", "rmsea", "srmr"), 
+  type = "html",
+  table.float = TRUE,
+  longtable = TRUE, 
+  print.results = TRUE,
+  alpha = c(0.05, 0.01, 0.001)
+)
+
+```
+
+```{r}
+
+figure_ammsa_cfa_fit <- semPaths(
+  object = ammsa_cfa_fit,
+  whatLabels = 'std',
+  intercepts = FALSE,
+  curvePivot = TRUE, # making curved arrows
+  esize = 1, # thickness of arrows
+  nCharNodes = 8, # uses 8 characters of the name in the boxes
+  edge.label.cex = 1,
+  residuals = FALSE, # does not show the error terms/residuals
+  sizeMan = 5, # width of manifest var box
+  sizeLat = 10,
+  layout = 'circle',
+  nodeLabels = c(1:21, 'AMMSA')
+)
+
+```
+
+
+### Ammsa measurement invariance
+```{r}
+
+if (!file.exists('./rda/ammsa_cfa_invar_1.rda')) {
+  
+  
+  # configural invariance
+  
+  ammsa_cfa_invar_1 <- cfa(ammsa_cfa,
+                           data = data_hetero_malefemale %>% 
+                             select(starts_with('ammsa'), 'gender'),
+                           se = 'bootstrap',
+                           bootstrap = 5000,
+                           group = 'gender',
+                           meanstructure = TRUE)
+  
+  # weak invariance
+  
+  ammsa_cfa_invar_2 <- cfa(ammsa_cfa,
+                           data = data_hetero_malefemale %>% 
+                             select(starts_with('ammsa'), 'gender'),
+                           se = 'bootstrap',
+                           bootstrap = 5000,
+                           group = 'gender',
+                           group.equal = 'loadings',
+                           meanstructure = TRUE)
+  
+  # strong invariance
+  
+  ammsa_cfa_invar_3 <- cfa(ammsa_cfa,
+                           data = data_hetero_malefemale %>% 
+                             select(starts_with('ammsa'), 'gender'),
+                           se = 'bootstrap',
+                           bootstrap = 5000,
+                           group = 'gender',
+                           group.equal = c('loadings', 'intercepts'),
+                           meanstructure = TRUE)
+  
+  # strict invariance
+  
+  ammsa_cfa_invar_4 <- cfa(ammsa_cfa,
+                           data = data_hetero_malefemale %>% 
+                             select(starts_with('ammsa'), 'gender'),
+                           se = 'bootstrap',
+                           bootstrap = 5000,
+                           group = 'gender',
+                           group.equal = c('loadings', 'intercepts', 'residuals'),
+                           meanstructure = TRUE)
+  
+  
+  save(ammsa_cfa_invar_1, file = './rda/ammsa_cfa_invar_1.rda')
+  save(ammsa_cfa_invar_2, file = './rda/ammsa_cfa_invar_2.rda')
+  save(ammsa_cfa_invar_3, file = './rda/ammsa_cfa_invar_3.rda')
+  save(ammsa_cfa_invar_4, file = './rda/ammsa_cfa_invar_4.rda')
+
+} else {
+  
+  load('./rda/ammsa_cfa_invar_1.rda')
+  load('./rda/ammsa_cfa_invar_2.rda')
+  load('./rda/ammsa_cfa_invar_3.rda')
+  load('./rda/ammsa_cfa_invar_4.rda')
+  
+}
+
+
+fitind_ammsa_cfa_invar_1 <- fitmeasures(ammsa_cfa_invar_1)
+fitind_ammsa_cfa_invar_2 <- fitmeasures(ammsa_cfa_invar_2)
+fitind_ammsa_cfa_invar_3 <- fitmeasures(ammsa_cfa_invar_3)
+fitind_ammsa_cfa_invar_4 <- fitmeasures(ammsa_cfa_invar_4)
+
+
+# comparing invariance models
+
+anova(ammsa_cfa_invar_1, ammsa_cfa_invar_2, ammsa_cfa_invar_3, ammsa_cfa_invar_4)
+
+```
+
+
+## Sexual Scripts Sakaluk 1-factor model
+```{r}
+
+# model specification
+
+sakaluk_cfa_1factor <- ('
+                
+                sexualscripts_sakaluk =~ sexualstandards_1 + sexualstandards _2 + sexualstandards _3 + sexualstandards _4 + sexualstandards _5 + sexualstandards _6 + sexualstandards _7 + sexualstandards _8 + sexualstandards _9 + complexity_1 + complexity_2 + complexity_3 + complexity_4 + complexity_5 + complexity_6 + complexity_7 + sexdrive_1 + sexdrive_2 + sexdrive_3 + sexdrive_4 + sexdrive_5 + performanceandorgasm_1 + performanceandorgasm_2 + performanceandorgasm_3 + performanceandorgasm_4 + player_1 + player_2 + player_3 + player_4 + emotionalsex_1 + emotionalsex_2 + emotionalsex_3
+                
+                ')
+
+
+# model fitting
+
+if (!file.exists('./rda/sakaluk_cfa_1factor_fit.rda')) {
+  
+  sakaluk_cfa_1factor_fit <- cfa(
+    model = sakaluk_cfa_1factor,
+    data = data_hetero_malefemale,
+    se = 'bootstrap',
+    bootstrap = 5000,
+    meanstructure = TRUE
+    )
+  
+  save(sakaluk_cfa_1factor_fit, file = './rda/sakaluk_cfa_1factor_fit.rda')
+  
+} else {
+  
+  load('./rda/sakaluk_cfa_1factor_fit.rda')
+  
+}
+
+
+# summary of fit
+
+summary(sakaluk_cfa_1factor_fit, fit.measures = TRUE, standardize = TRUE)
+
+
+```
+
+
+### Sexual Scripts Sakaluk 1-factor model visualizations
+```{r}
+
+table_sakaluk_cfa_1factor_fit <- semTable(
+  sakaluk_cfa_1factor_fit, 
+  file = './tables/table_sakaluk_cfa_1factor_fit',
+  paramSets = c('loadings', 'slopes', 'intercepts', 'residualvariances'), 
+  columns = c(est = "Estimate", se = "SE", p = "p"),
+  fits = c("chisq", "cfi", "tli", "rmsea", "srmr"), 
+  type = "html",
+  table.float = TRUE,
+  longtable = TRUE, 
+  print.results = TRUE,
+  alpha = c(0.05, 0.01, 0.001)
+)
+
+```
+
+```{r}
+
+figure_sakaluk_cfa_1factor_fit <- semPaths(
+  object = sakaluk_cfa_1factor_fit,
+  whatLabels = 'std',
+  intercepts = FALSE,
+  curvePivot = TRUE, # making curved arrows
+  esize = 1, # thickness of arrows
+  nCharNodes = 8, # uses 8 characters of the name in the boxes
+  edge.label.cex = 1,
+  residuals = FALSE, # does not show the error terms/residuals
+  sizeMan = 5, # width of manifest var box
+  sizeLat = 10,
+  layout = 'circle'
+)
+
+```
+
+
+## Sexual Scripts Sakaluk 6-factor model
+
+Paper mentioned they allowed error-term correlations, but don't specify which ones
+Do I ignore that or do I use modification indices?
+
+```{r}
+
+# model specification
+
+sakaluk_cfa_6factor <- ('
+                
+                # latent variables
+                
+                sexualstandards =~ sexualstandards_1 + sexualstandards _2 + sexualstandards _3 + sexualstandards _4 + sexualstandards _5 + sexualstandards _6 + sexualstandards _7 + sexualstandards _8 + sexualstandards _9
+                
+                complexity =~ complexity_1 + complexity_2 + complexity_3 + complexity_4 + complexity_5 + complexity_6 + complexity_7
+                
+                sexdrive =~ sexdrive_1 + sexdrive_2 + sexdrive_3 + sexdrive_4 + sexdrive_5
+                
+                performanceandorgasm =~ performanceandorgasm_1 + performanceandorgasm_2 + performanceandorgasm_3 + performanceandorgasm_4
+                
+                player =~ player_1 + player_2 + player_3 + player_4
+                
+                emotionalsex =~ emotionalsex_1 + emotionalsex_2 + emotionalsex_3
+                
+                
+                # covariates
+                
+                sexualstandards ~~ complexity
+                sexualstandards ~~ sexdrive
+                sexualstandards ~~ performanceandorgasm
+                sexualstandards ~~ player
+                sexualstandards ~~ emotionalsex
+                
+                complexity ~~ sexdrive
+                complexity ~~ performanceandorgasm
+                complexity ~~ player
+                complexity ~~ emotionalsex
+                
+                sexdrive ~~ performanceandorgasm
+                sexdrive ~~ player
+                sexdrive ~~ emotionalsex
+                
+                performanceandorgasm ~~ player
+                performanceandorgasm ~~ emotionalsex
+                
+                player ~~ emotionalsex
+                
+                ')
+
+
+# model fitting
+
+if (!file.exists('./rda/sakaluk_cfa_6factor_fit.rda')) {
+  
+  sakaluk_cfa_6factor_fit <- cfa(
+    model = sakaluk_cfa_6factor,
+    data = data_hetero_malefemale,
+    se = 'bootstrap',
+    bootstrap = 5000,
+    meanstructure = TRUE
+    )
+  
+  save(sakaluk_cfa_6factor_fit, file = './rda/sakaluk_cfa_6factor_fit.rda')
+  
+} else {
+  
+  load('./rda/sakaluk_cfa_6factor_fit.rda')
+  
+}
+
+
+# summary of fit
+
+summary(sakaluk_cfa_6factor_fit, fit.measures = TRUE, standardize = TRUE)
+
+
+```
+
+
+### Sexual Scripts Sakaluk 6-factor model visualizations
+```{r}
+
+table_sakaluk_cfa_6factor_fit <- semTable(
+  sakaluk_cfa_6factor_fit, 
+  file = './tables/table_sakaluk_cfa_6factor_fit',
+  paramSets = c('loadings', 'slopes', 'intercepts', 'residualvariances'), 
+  columns = c(est = "Estimate", se = "SE", p = "p"),
+  fits = c("chisq", "cfi", "tli", "rmsea", "srmr"), 
+  type = "html",
+  table.float = TRUE,
+  longtable = TRUE, 
+  print.results = TRUE,
+  alpha = c(0.05, 0.01, 0.001)
+)
+
+```
+
+```{r}
+
+figure_sakaluk_cfa_6factor_fit <- semPaths(
+  object = sakaluk_cfa_6factor_fit,
+  whatLabels = 'std',
+  intercepts = FALSE,
+  curvePivot = TRUE, # making curved arrows
+  esize = 1, # thickness of arrows
+  nCharNodes = 8, # uses 8 characters of the name in the boxes
+  edge.label.cex = 1,
+  residuals = FALSE, # does not show the error terms/residuals
+  sizeMan = 5, # width of manifest var box
+  sizeLat = 10,
+  layout = 'circle'
+)
+
+```
+
+
+## Sexual Scripts Sakaluk 1-factor and 6-factor model comparison
+```{r}
+
+anova(sakaluk_cfa_1factor_fit, sakaluk_cfa_2factor_fit)
+
+```
+
+
+### Sexual Scripts Sakaluk 6-factor model measurement invariance
+```{r}
+
+if (!file.exists('./rda/sakaluk_cfa_6factor_invar_1.rda')) {
+  
+  
+  # configural invariance
+  
+  sakaluk_cfa_6factor_invar_1 <- cfa(sakaluk_cfa_6factor,
+                                     data = data_hetero_malefemale %>% 
+                                       select(
+                                         starts_with('sexualstandards'),
+                                         starts_with('complexity'),
+                                         starts_with('sexdrive'),
+                                         starts_with('performanceandorgasm'),
+                                         starts_with('player'),
+                                         starts_with('emotionalsex'),
+                                         'gender'),
+                                     se = 'bootstrap',bootstrap = 5000,
+                                     group = 'gender',
+                                     meanstructure = TRUE)
+  
+  # weak invariance
+  
+  sakaluk_cfa_6factor_invar_2 <- cfa(sakaluk_cfa_6factor,
+                                     data = data_hetero_malefemale %>% 
+                                       select(
+                                         starts_with('sexualstandards'),
+                                         starts_with('complexity'),
+                                         starts_with('sexdrive'),
+                                         starts_with('performanceandorgasm'),
+                                         starts_with('player'),
+                                         starts_with('emotionalsex'),
+                                         'gender'),
+                                     se = 'bootstrap',bootstrap = 5000,
+                                     group = 'gender',
+                                     group.equal = 'loadings',
+                                     meanstructure = TRUE)
+  
+  # strong invariance
+  
+  sakaluk_cfa_6factor_invar_3 <- cfa(sakaluk_cfa_6factor,
+                                     data = data_hetero_malefemale %>% 
+                                       select(
+                                         starts_with('sexualstandards'),
+                                         starts_with('complexity'),
+                                         starts_with('sexdrive'),
+                                         starts_with('performanceandorgasm'),
+                                         starts_with('player'),
+                                         starts_with('emotionalsex'),
+                                         'gender'),
+                                     se = 'bootstrap',bootstrap = 5000,
+                                     group = 'gender',
+                                     group.equal = c('loadings', 'intercepts'),
+                                     meanstructure = TRUE)
+  
+  # strict invariance
+  
+  sakaluk_cfa_6factor_invar_4 <- cfa(sakaluk_cfa_6factor,
+                                     data = data_hetero_malefemale %>% 
+                                       select(
+                                         starts_with('sexualstandards'),
+                                         starts_with('complexity'),
+                                         starts_with('sexdrive'),
+                                         starts_with('performanceandorgasm'),
+                                         starts_with('player'),
+                                         starts_with('emotionalsex'),
+                                         'gender'),
+                                     se = 'bootstrap',bootstrap = 5000,
+                                     group = 'gender',
+                                     group.equal = c('loadings', 'intercepts', 'residuals'),
+                                     meanstructure = TRUE)
+  
+  
+  save(sakaluk_cfa_6factor_invar_1, file = './rda/sakaluk_cfa_6factor_invar_1.rda')
+  save(sakaluk_cfa_6factor_invar_2, file = './rda/sakaluk_cfa_6factor_invar_2.rda')
+  save(sakaluk_cfa_6factor_invar_3, file = './rda/sakaluk_cfa_6factor_invar_3.rda')
+  save(sakaluk_cfa_6factor_invar_4, file = './rda/sakaluk_cfa_6factor_invar_4.rda')
+
+} else {
+  
+  load('./rda/sakaluk_cfa_6factor_invar_1.rda')
+  load('./rda/sakaluk_cfa_6factor_invar_2.rda')
+  load('./rda/sakaluk_cfa_6factor_invar_3.rda')
+  load('./rda/sakaluk_cfa_6factor_invar_4.rda')
+  
+}
+
+
+fitind_sakaluk_cfa_6factor_invar_1 <- fitmeasures(sakaluk_cfa_6factor_invar_1)
+fitind_sakaluk_cfa_6factor_invar_2 <- fitmeasures(sakaluk_cfa_6factor_invar_2)
+fitind_sakaluk_cfa_6factor_invar_3 <- fitmeasures(sakaluk_cfa_6factor_invar_3)
+fitind_sakaluk_cfa_6factor_invar_4 <- fitmeasures(sakaluk_cfa_6factor_invar_4)
+
+
+# comparing invariance models
+
+anova(sakaluk_cfa_6factor_invar_1, sakaluk_cfa_6factor_invar_2, sakaluk_cfa_6factor_invar_3, sakaluk_cfa_6factor_invar_4)
+
+```
+
+
+## Sexual Scripts Seabrook 4-factor model
+```{r}
+
+# model specification
+
+seabrook_cfa_4factor <- ('
+                
+                # latent variables
+                
+                courtship =~ courtship_1 + courtship_2 + courtship_3 + courtship_4 + courtship_5 + courtship_6 + courtship_7 + courtship_8
+                
+                initiators =~ initiators_1 + initiators_2 + initiators_3 + initiators_4
+                
+                appearance =~ appearance_1 + appearance_2 + appearance_3 + appearance_4 + appearance_5
+                
+                doublestandards =~ doublestandards_1 + doublestandards_2 + doublestandards_3 + doublestandards_4 + doublestandards_5
+                
+                
+                # covariates 
+                
+                courtship ~~ initiators
+                courtship ~~ appearance
+                courtship ~~ doublestandards
+                
+                initiators ~~ appearance
+                initiators ~~ doublestandards
+                
+                appearance ~~ doublestandards
+                
+                ')
+
+
+# model fitting
+
+if (!file.exists('./rda/seabrook_cfa_4factor_fit.rda')) {
+  
+  seabrook_cfa_4factor_fit <- cfa(
+    model = seabrook_cfa_4factor,
+    data = data_hetero_malefemale,
+    se = 'bootstrap',
+    bootstrap = 5000,
+    meanstructure = TRUE
+    )
+  
+  save(seabrook_cfa_4factor_fit, file = './rda/seabrook_cfa_4factor_fit.rda')
+  
+} else {
+  
+  load('./rda/seabrook_cfa_4factor_fit.rda')
+  
+}
+
+
+# summary of fit
+
+summary(seabrook_cfa_4factor_fit, fit.measures = TRUE, standardize = TRUE)
+
+```
+
+
+### Sexual Scripts Seabrook 4-factor model visualizations
+```{r}
+
+table_seabrook_cfa_4factor_fit <- semTable(
+  seabrook_cfa_4factor_fit, 
+  file = './tables/table_seabrook_cfa_4factor_fit',
+  paramSets = c('loadings', 'slopes', 'intercepts', 'residualvariances'), 
+  columns = c(est = "Estimate", se = "SE", p = "p"),
+  fits = c("chisq", "cfi", "tli", "rmsea", "srmr"), 
+  type = "html",
+  table.float = TRUE,
+  longtable = TRUE, 
+  print.results = TRUE,
+  alpha = c(0.05, 0.01, 0.001)
+)
+
+```
+
+```{r}
+
+figure_seabrook_cfa_4factor_fit <- semPaths(
+  object = seabrook_cfa_4factor_fit,
+  whatLabels = 'std',
+  intercepts = FALSE,
+  curvePivot = TRUE, # making curved arrows
+  esize = 1, # thickness of arrows
+  nCharNodes = 8, # uses 8 characters of the name in the boxes
+  edge.label.cex = 1,
+  residuals = FALSE, # does not show the error terms/residuals
+  sizeMan = 5, # width of manifest var box
+  sizeLat = 10,
+  layout = 'circle'
+)
+
+```
+
+
+## Sexual Scripts Seabrook higher order factor model
+
+Are the 1st order factors supposed to be correlated, or not?
+
+```{r}
+
+# model specification
+
+seabrook_cfa_higherfactor <- ('
+                
+                # latent variables
+                
+                courtship =~ courtship_1 + courtship_2 + courtship_3 + courtship_4 + courtship_5 + courtship_6 + courtship_7 + courtship_8
+                
+                initiators =~ initiators_1 + initiators_2 + initiators_3 + initiators_4
+                
+                appearance =~ appearance_1 + appearance_2 + appearance_3 + appearance_4 + appearance_5
+                
+                doublestandards =~ doublestandards_1 + doublestandards_2 + doublestandards_3 + doublestandards_4 + doublestandards_5
+                
+                sexualscript =~ courtship + initiators + appearance + doublestandards
+                
+                ')
+
+
+# model fitting
+
+if (!file.exists('./rda/seabrook_cfa_higherfactor_fit.rda')) {
+  
+  seabrook_cfa_higherfactor_fit <- cfa(
+    model = seabrook_cfa_higherfactor,
+    data = data_hetero_malefemale,
+    se = 'bootstrap',
+    bootstrap = 5000,
+    meanstructure = TRUE
+    )
+  
+  save(seabrook_cfa_higherfactor_fit, file = './rda/seabrook_cfa_higherfactor_fit.rda')
+  
+} else {
+  
+  load('./rda/seabrook_cfa_higherfactor_fit.rda')
+  
+}
+
+
+# summary of fit
+
+summary(seabrook_cfa_higherfactor_fit, fit.measures = TRUE, standardize = TRUE)
+
+```
+
+
+### Sexual Scripts Seabrook higher order factor model visualizations
+```{r}
+
+table_seabrook_cfa_higherfactor_fit <- semTable(
+  seabrook_cfa_higherfactor_fit, 
+  file = './tables/table_seabrook_cfa_higherfactor_fit',
+  paramSets = c('loadings', 'slopes', 'intercepts', 'residualvariances'), 
+  columns = c(est = "Estimate", se = "SE", p = "p"),
+  fits = c("chisq", "cfi", "tli", "rmsea", "srmr"), 
+  type = "html",
+  table.float = TRUE,
+  longtable = TRUE, 
+  print.results = TRUE,
+  alpha = c(0.05, 0.01, 0.001)
+)
+
+```
+
+```{r}
+
+figure_seabrook_cfa_higherfactor_fit <- semPaths(
+  object = seabrook_cfa_higherfactor_fit,
+  whatLabels = 'std',
+  intercepts = FALSE,
+  curvePivot = TRUE, # making curved arrows
+  esize = 1, # thickness of arrows
+  nCharNodes = 8, # uses 8 characters of the name in the boxes
+  edge.label.cex = 1,
+  residuals = FALSE, # does not show the error terms/residuals
+  sizeMan = 5, # width of manifest var box
+  sizeLat = 10,
+  layout = 'circle'
+)
+
+```
+
+
+## Sexual Scripts Seabrook 4-factor and higher order factor model comparison
+```{r}
+
+anova(seabrook_cfa_4factor_fit, seabrook_cfa_higherfactor_fit)
+
+```
+
+
+### Sexual Scripts Seabrook higher order factor model measurement invariance
+```{r}
+
+if (!file.exists('./rda/seabrook_cfa_higherfactor_invar_1.rda')) {
+  
+  
+  # configural invariance
+  
+  seabrook_cfa_higherfactor_invar_1 <- cfa(seabrook_cfa_higherfactor,
+                                       data = data_hetero_malefemale %>% 
+                                        select(
+                                          starts_with('courtship'),
+                                          starts_with('initiators'),
+                                          starts_with('appearance'),
+                                          starts_with('doublestandards'),
+                                          'gender'),
+                                      se = 'bootstrap',bootstrap = 5000,
+                                      group = 'gender',
+                                      meanstructure = TRUE)
+  
+  # weak invariance
+  
+  seabrook_cfa_higherfactor_invar_2 <- cfa(seabrook_cfa_higherfactor,
+                                       data = data_hetero_malefemale %>% 
+                                        select(
+                                          starts_with('courtship'),
+                                          starts_with('initiators'),
+                                          starts_with('appearance'),
+                                          starts_with('doublestandards'),
+                                          'gender'),
+                                      se = 'bootstrap',bootstrap = 5000,
+                                      group = 'gender',
+                                      group.equal = 'loadings',
+                                      meanstructure = TRUE)
+  
+  # strong invariance
+  
+  seabrook_cfa_higherfactor_invar_3 <- cfa(seabrook_cfa_higherfactor,
+                                       data = data_hetero_malefemale %>% 
+                                        select(
+                                          starts_with('courtship'),
+                                          starts_with('initiators'),
+                                          starts_with('appearance'),
+                                          starts_with('doublestandards'),
+                                          'gender'),
+                                      se = 'bootstrap',bootstrap = 5000,
+                                      group = 'gender',
+                                      group.equal = c('loadings', 'intercepts'),
+                                      meanstructure = TRUE)
+  
+  # strict invariance
+  
+  seabrook_cfa_higherfactor_invar_4 <- cfa(seabrook_cfa_higherfactor,
+                                       data = data_hetero_malefemale %>% 
+                                        select(
+                                          starts_with('courtship'),
+                                          starts_with('initiators'),
+                                          starts_with('appearance'),
+                                          starts_with('doublestandards'),
+                                          'gender'),
+                                      se = 'bootstrap',bootstrap = 5000,
+                                      group = 'gender',
+                                      group.equal = c('loadings', 'intercepts', 'residuals'),
+                                      meanstructure = TRUE)
+  
+  
+  save(seabrook_cfa_higherfactor_invar_1, file = './rda/seabrook_cfa_higherfactor_invar_1.rda')
+  save(seabrook_cfa_higherfactor_invar_2, file = './rda/seabrook_cfa_higherfactor_invar_2.rda')
+  save(seabrook_cfa_higherfactor_invar_3, file = './rda/seabrook_cfa_higherfactor_invar_3.rda')
+  save(seabrook_cfa_higherfactor_invar_4, file = './rda/seabrook_cfa_higherfactor_invar_4.rda')
+
+} else {
+  
+  load('./rda/seabrook_cfa_higherfactor_invar_1.rda')
+  load('./rda/seabrook_cfa_higherfactor_invar_2.rda')
+  load('./rda/seabrook_cfa_higherfactor_invar_3.rda')
+  load('./rda/seabrook_cfa_higherfactor_invar_4.rda')
+  
+}
+
+
+fitind_seabrook_cfa_higherfactor_invar_1 <- fitmeasures(seabrook_cfa_higherfactor_invar_1)
+fitind_seabrook_cfa_higherfactor_invar_2 <- fitmeasures(seabrook_cfa_higherfactor_invar_2)
+fitind_seabrook_cfa_higherfactor_invar_3 <- fitmeasures(seabrook_cfa_higherfactor_invar_3)
+fitind_seabrook_cfa_higherfactor_invar_4 <- fitmeasures(seabrook_cfa_higherfactor_invar_4)
+
+
+# comparing invariance models
+
+anova(seabrook_cfa_higherfactor_invar_1, seabrook_cfa_higherfactor_invar_2, seabrook_cfa_higherfactor_invar_3, seabrook_cfa_higherfactor_invar_4)
+
+```
+
+
+
+# Network Model
+```{r}
+
+data_networkmodel <- data_hetero_malefemale %>% 
+  select(
+    - 'id',
+    - 'gender',
+    - starts_with('ammsa')
+  )
+
+
+if (!file.exists('./rda/sexualscript_networkmodel.rda')) {
+  
+  # model the variance-covariance matrix
+  networkmodel <- varcov(data = data_networkmodel,
+                        type = 'ggm', # Gaussian graphical model
+                        omega = 'full') # estimate every element freely
+
+
+  # run model and estimate structure --> time consuming
+  networkmodel_final <- networkmodel %>% 
+    runmodel() %>% 
+    prune(alpha = 0.05, recursive = TRUE) %>% # iterative process pruning non-significant parameters and refitting model
+    modelsearch(
+      criterion = 'bic', # optimal model with smallest BIC
+      prunealpha = 0.05, # min alpha, larger edges will be removed
+      addalpha = 0.05, # max alpha, smaller edges will be added
+    )
+
+  
+  save(networkmodel_final, file = './rda/sexualscript_networkmodel.rda')
+  
+  
+} else {
+  
+  load('./rda/sexualscript_networkmodel.rda')
+  
+}
+
+
+
+fit_networkmodel <- fit(networkmodel_final) # fit indices
+
+pars_networkmodel <- parameters(networkmodel_final) # all parameters
+
+```
+
+
+## Graph Network Model
+```{r}
+
+networklabels <- c(
+  'sexst_1',
+  'sexst_2',
+  'sexst_3',
+  'sexst_4',
+  'sexst_5',
+  'sexst_6',
+  'sexst_7',
+  'sexst_8',
+  'sexst_9',
+  'comp_1',
+  'comp_2',
+  'comp_3',
+  'comp_4',
+  'comp_5',
+  'comp_6',
+  'comp_7',
+  'sexd_1',
+  'sexd_2',
+  'sexd_3',
+  'sexd_4',
+  'sexd_5',
+  'perf_1',
+  'perf_2',
+  'perf_3',
+  'perf_4',
+  'play_1',
+  'play_2',
+  'play_3',
+  'play_4',
+  'emse_1',
+  'emse_2',
+  'emse_3',
+  'emse_4',
+  'cour_1',
+  'cour_2',
+  'cour_3',
+  'cour_4',
+  'cour_5',
+  'cour_6',
+  'cour_7',
+  'cour_8',
+  'init_1',
+  'init_2',
+  'init_3',
+  'init_4',
+  'appe_1',
+  'appe_2',
+  'appe_3',
+  'appe_4',
+  'appe_5',
+  'dost_1',
+  'dost_2',
+  'dost_3',
+  'dost_4',
+  'dost_5',
+  'arra_1',
+  'situ_1',
+  'situ_2',
+  'situ_3',
+  'sex_1',
+  'sex_2',
+  'sex_3',
+  'sex_4',
+  'sex_5',
+  'sexlo_1',
+  'sexlo_2',
+  'sexlo_3',
+  'sexlo_4',
+  'sexlo_5',
+  'sexlo_6',
+  'cont_1',
+  'cont_2',
+  'cont_3',
+  'cont_4',
+  'cont_5',
+  'met_1',
+  'known_1',
+  'subst_1',
+  'subst_2',
+  'subst_3',
+  'subst_4',
+  'drunk_1',
+  'drunk_2',
+  'cboy_1',
+  'cboy_2',
+  'cgirl_1',
+  'cgirl_2',
+  'after_1',
+  'after_2',
+  'outg_1',
+  'outg_2',
+  'outg_3',
+  'outb_1',
+  'outb_2',
+  'outb_3'
+)
+
+  
+network <- getmatrix(
+  networkmodel_final, 
+  'omega')
+
+
+graph_network <- qgraph(network,
+                        layout = 'spring',
+                        theme = 'colorblind',
+                        title = 'Sexual Script Network Model',
+                        labels = networklabels, 
+                        edge.labels = TRUE,
+                        edge.labels.cex = 0.4,
+                        vsize = 2,
+                        shape = 'circle',
+                        filetype = 'pdf',
+                        filename = 'sexualscriptnetwork')
+
+```
+
+
+## Node Centrality
+
+### Centrality Plot
+```{r}
+
+graph_centrality_network <- qgraph::centralityPlot(
+  graph_network,
+  include = c('Strength', 'Closeness', 'Betweenness'))
+
+```
+
+
+### Strength
+
+= sum of the absolute edge values connected to a given node;
+represents direct influence the given node has on the network
+
+```{r}
+
+network_strength <- graph_centrality_network$data %>% # take qgraph data
+  filter(measure == 'Strength') %>% # take strength data
+  arrange(desc(value)) %>% # arrange largest value first
+  mutate(
+    node = as.numeric(node)
+  ) %>% 
+  left_join(filter(item_text, scale == 'sexualscripts', by = c('node' = 'item')))
+  
+```
+
+
+### Betweenness
+
+= how strongly a given node can disrupt information flow in the network;
+calculates the number of shortest paths a given node lies on
+
+```{r}
+
+network_between <- graph_centrality_network$data %>% 
+  filter(measure == "Betweenness") %>% 
+  arrange(desc(value)) %>% 
+  mutate(
+    node = as.numeric(node)
+  ) %>% 
+  left_join(filter(item_text, scale == "sexualscripts"), by = c("node" = "item"))
+
+```
+
+
+## Network Connectivity (ASPL)
+
+Average of all shortest path lengths between all nodes in the network
+Low length = high connectivity
+
+```{r}
+
+spl_network <- centrality(graph_network)$ShortestPathLengths
+
+spl_network <- spl_network[upper.tri(spl_network)]
+aspl_network <- mean(spl_network)
+
+```
+
+
+## Communities/Clusters
+```{r}
+
+# how many 'factors' would I have?
+
+parallel_sexualscripts <- fa.parallel(data_networkmodel)
+
+
+# trying spinglass algorithm -  only allows items to be part of one community 
+
+set.seed(4905)
+
+communities <- as.igraph(networkmodel_final, attributes = TRUE) %>% 
+  spinglass.community()
+
+communities$membership
+
+
+# exploratory graph analysis
+
+ega_sexualscripts <-EGAnet::EGA(data_networkmodel,
+                                model = 'glasso',
+                                algorithm = 'walktrap',
+                                plot.EGA = TRUE,
+                                )
+
+```
+
+
+# Network simulation - I'm very lost here
+
+continuous edge weights = connectivity between nodes (positive large assumes same state of nodes)
+
+continuous thresholds of nodes = the higher the threshold, the stronger the disposition that this node is 'on'
+
+temperature parameter = degree of randomness in the system; when beta shrinks to 0, all states become equally likely (= high degree of randomness)
+
+
+Questions:
+What do I choose for thresholds, temperature, etc? Where do those values come from or how do I choose them?
+Do I need polychoric correlations for network estimation bc data will probably not be normal, plus it is ordinal, not continuous (lavaan: lavCor(), cor_auto)?
+
+## Baseline - why do I need to simulate this instead of using the actual obtained model?
+```{r}
+
+# depends on the results of the network model? 
+# what the actual sample distribution looks like? 
+
+set.seed(1234) # to have the same random numbers again when re-running the code
+
+
+sexualscript_sim_base <- IsingSampler(
+  10000, # sample size I want
+  getmatrix(networkmodel_final, 'omega'),
+  c(rep(-,)), # where do the thresholds come from? min and max est in the network pars?
+  responses = c(0, 1) # meaning no negative responses?
+  )
+
+
+sexualscript_sim_base <- sexualscript_sim_base %>% # making a dataframe out of it
+  as.data.frame()
+
+
+sexualscript_sim_base$total <- rowSums(sexualscript_sim_base)
+
+
+hist_sexualscript_sim_base <- ggplot( 
+  ammsa_sim_base,
+  aes(
+    x = total
+    )) +
+  geom_histogram(
+    binwidth = 1,
+    color = 'black',
+    fill = 'grey'
+  ) +
+  scale_x_continuous(
+    limits = c(),
+    breaks = seq()
+  ) +
+  theme_classic()
+
+
+```
+
+
+# Persuasion
+```{r}
+
+# depends on what node has highest strength?
+
+
+sexualscript_sim_pers <- IsingSampler(
+  10000, 
+  getmatrix(networkmodel_final, 'omega'),
+  c(rep(,), , rep()), # what are the thresholds, beta etc.?
+  responses = c(0, 1))
+
+
+sexualscript_sim_pers <- sexualscript_sim_pers %>% 
+  as.data.frame()
+
+
+sexualscript_sim_pers$total <- rowSums(sexualscript_sim_pers)
+
+hist_sexualscript_sim_pers <- 
+  ggplot(sexualscript_sim_pers,
+         aes(
+           x = total
+         )) +
+  geom_histogram(
+    binwidth = 1
+    color = 'black',
+    fill = 'grey'
+  ) +
+  scale_x_continuous(
+    limits = c(),
+    breaks = seq()
+  ) +
+  theme_classic()
+
+
+
+
+t.test(sexualscript_sim_pers$total, sexualscript_sim_base$total) # comparing if theres a difference overall between baseline and persuasion
+
+```
+
+
+
+
+
+

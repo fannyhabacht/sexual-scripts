@@ -75,7 +75,31 @@ data_onlyhetero_malefemale <- data_onlyhetero %>%
 ```{r}
 
 data_heteroscales <- data_onlyhetero_malefemale %>% 
-  select('id', starts_with('sexualstandards'), starts_with('complexity'), starts_with('sexdrive'), starts_with('performanceandorgasm'), starts_with('player'), starts_with('emotionalsex'), starts_with('courtship'), starts_with('initiators'), starts_with('appearance'), starts_with('doublestandards'), starts_with('ammsa'), starts_with('arranged'), starts_with('situation'), starts_with('sex'), starts_with('sexlocation'), starts_with('contraception'), 'metbefore', 'knownbefore', starts_with('substances'), starts_with('drunkstoned'), starts_with('consent'), starts_with('afterfeeling'), starts_with('outlook')) 
+  select(
+    'id', 
+    starts_with('sexualstandards'), 
+    starts_with('complexity'), 
+    starts_with('sexdrive'), 
+    starts_with('performanceandorgasm'), 
+    starts_with('player'), 
+    starts_with('emotionalsex'), 
+    starts_with('courtship'), 
+    starts_with('initiators'), 
+    starts_with('appearance'), 
+    starts_with('doublestandards'), 
+    starts_with('ammsa'), 
+    starts_with('arranged'), 
+    starts_with('situation'), 
+    starts_with('sex'), 
+    starts_with('sexlocation'), 
+    starts_with('contraception'), 
+    'metbefore', 
+    'knownbefore',
+    starts_with('substances'), 
+    starts_with('drunkstoned'), 
+    starts_with('consent'), 
+    starts_with('afterfeeling'), 
+    starts_with('outlook')) 
 
 ```
 
@@ -180,8 +204,8 @@ hist_ammsa <-
          )) +
   geom_histogram(
     binwidth = .25,
-    color = "black",
-    fill = "grey"
+    color = 'black',
+    fill = 'grey'
   ) +
   scale_x_continuous(
     limits = c(1, 7),
@@ -211,8 +235,8 @@ hist_sakaluktotal <-
          )) +
   geom_histogram(
     binwidth = .25,
-    color = "black",
-    fill = "grey"
+    color = 'black',
+    fill = 'grey'
   ) +
   scale_x_continuous(
     limits = c(1, 6),
@@ -240,8 +264,8 @@ hist_sakaluksexualstandards <-
          )) +
   geom_histogram(
     binwidth = .25,
-    color = "black",
-    fill = "grey"
+    color = 'black',
+    fill = 'grey'
   ) +
   scale_x_continuous(
     limits = c(1, 6),
@@ -275,8 +299,8 @@ hist_sakalukcomplexity <-
          )) +
   geom_histogram(
     binwidth = .25,
-    color = "black",
-    fill = "grey"
+    color = 'black',
+    fill = 'grey'
   ) +
   scale_x_continuous(
     limits = c(1, 6),
@@ -310,8 +334,8 @@ hist_sakaluksexdrive <-
          )) +
   geom_histogram(
     binwidth = .25,
-    color = "black",
-    fill = "grey"
+    color = 'black',
+    fill = 'grey'
   ) +
   scale_x_continuous(
     limits = c(1, 6),
@@ -345,8 +369,8 @@ hist_sakalukperformance <-
          )) +
   geom_histogram(
     binwidth = .25,
-    color = "black",
-    fill = "grey"
+    color = 'black',
+    fill = 'grey'
   ) +
   scale_x_continuous(
     limits = c(1, 6),
@@ -380,8 +404,8 @@ hist_sakalukplayer <-
          )) +
   geom_histogram(
     binwidth = .25,
-    color = "black",
-    fill = "grey"
+    color = 'black',
+    fill = 'grey'
   ) +
   scale_x_continuous(
     limits = c(1, 6),
