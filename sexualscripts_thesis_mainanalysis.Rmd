@@ -1058,6 +1058,12 @@ communities <- as.igraph(networkmodel_final, attributes = TRUE) %>%
 
 communities$membership
 
+communities_graph <- cluster_spinglass(graph_network,
+                                       spins = 100,
+                                       start.temp = 1,
+                                       stop.temp = 0.01,
+                                       gamma = 1)
+
 
 # exploratory graph analysis
 
