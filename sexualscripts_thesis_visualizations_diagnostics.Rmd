@@ -16,7 +16,7 @@ This code includes preparing the dataset further for the main analysis (total sc
 # Packages
 ```{r}
 
-packages <- c('tidyr', 'readr', 'dplyr', 'ggplot2', 'MVN', 'psych', 'cowplot')
+packages <- c('tidyr', 'readr', 'dplyr', 'ggplot2', 'MVN', 'psych', 'cowplot', 'naniar', 'misty')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -107,11 +107,20 @@ data_heteroscales <- data_onlyhetero_malefemale %>%
 ## Missing data screening
 ```{r}
 
-is.na(data_heteroscales) %>% # sum of missings
+# sum of missings
+
+is.na(data_heteroscales) %>%
   sum()
 
 
-sapply(data_heteroscales, function(x) which(is.na(x))) # location of missing values for each column
+# location of missing values for each column
+
+sapply(data_heteroscales, function(x) which(is.na(x)))
+
+
+# Little's MCAR test
+
+na.test(data_heteroscales, output = TRUE)
 
 ```
 
@@ -720,7 +729,7 @@ krahe_scale %>%
 ```
 
 
-# Multivariate normality
+# Diagnostics (Normality, Outliers)
 
 ## Ammsa total
 ```{r}
@@ -729,17 +738,25 @@ ammsa_scale <- data_onlyhetero_malefemale %>%
   select(starts_with('ammsa'))
   
 
-# Mardia's test
+# Normality and Outliers
+
 diagnostics_ammsa <- mvn(ammsa_scale,
                          mvnTest = 'mardia',
                          multivariateOutlierMethod = 'adj', # adjusted quantile method
-                         showOutliers = TRUE,
+                         univariateTest = 'SW', # univariate normality Shapiro-Wilk
+                         univariatePlot = 'box', # boxplot univariate outliers
+                         showOutliers = TRUE, # multivariate outliers based on mahalanobis
                          showNewData = TRUE) # data without outliers
+
+diagnostics_ammsa$univariateNormality # Shapiro-Wilk test
+
+diagnostics_ammsa$Descriptives # univariate skewness and kurtosis
 
 diagnostics_ammsa$multivariateNormality # mvn, skewness and kurtosis
 
 
 # qqplot
+
 ggplot(data_heteroscales,
         aes(
           sample = ammsa_total
@@ -753,7 +770,8 @@ geom_qq_line(
 theme_classic()
 
 
-# mahalanobis distances
+# squared mahalanobis distances
+
 cov_ammsa <- cov(ammsa_scale) # cov matrix
 
 colmeans_ammsa <- colMeans(ammsa_scale)
@@ -786,13 +804,20 @@ sakaluk_scale <- data_onlyhetero_malefemale %>%
   )
 
 
-# Mardia's test
+# Normality and Outliers
 
 diagnostics_sakaluk <- mvn(sakaluk_scale,
                            mvnTest = 'mardia',
-                           multivariateOutlierMethod = 'adj', # adjusted quantile method
+                           multivariateOutlierMethod = 'adj',
+                           univariateTest = 'SW',
+                           univariatePlot = 'box',
                            showOutliers = TRUE,
-                           showNewData = TRUE) # data without outliers
+                           showNewData = TRUE)
+
+
+diagnostics_sakaluk$univariateNormality # Shapiro-Wilk test
+
+diagnostics_sakaluk$Descriptives # univariate skewness and kurtosis
 
 diagnostics_sakaluk$multivariateNormality # mvn, skewness and kurtosis
 
@@ -812,7 +837,7 @@ geom_qq_line(
 theme_classic()
 
 
-# mahalanobis distances
+# squared mahalanobis distances
 
 cov_sakaluktotal <- cov(sakaluk_scale) # cov matrix
 
@@ -844,13 +869,21 @@ seabrook_scale <- data_onlyhetero_malefemale %>%
   )
 
 
-# Mardia's test
+# Normality and Outliers
 
 diagnostics_seabrook <- mvn(seabrook_scale,
                            mvnTest = 'mardia',
-                           multivariateOutlierMethod = 'adj', # adjusted quantile method
+                           multivariateOutlierMethod = 'adj',
+                           univariateTest = 'SW',
+                           univariatePlot = 'box',
                            showOutliers = TRUE,
-                           showNewData = TRUE) # data without outliers
+                           showNewData = TRUE)
+
+
+
+diagnostics_seabrook$univariateNormality # Shapiro-Wilk test
+
+diagnostics_seabrook$Descriptives # univariate skewness and kurtosis
 
 diagnostics_seabrook$multivariateNormality # mvn, skewness and kurtosis
 
@@ -870,7 +903,7 @@ geom_qq_line(
 theme_classic()
 
 
-# mahalanobis distances
+# squared mahalanobis distances
 
 cov_seabrooktotal <- cov(seabrook_scale) # cov matrix
 

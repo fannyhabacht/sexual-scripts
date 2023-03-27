@@ -189,7 +189,7 @@ data_clean <- data_clean %>%
 # Saving cleaned dataset
 ```{r}
 
-write.csv(data_clean, 'data_sexualscript_clean.csv', row.names = FALSE) # safe initially cleaned dataset
+write.csv(data_clean, 'data_sexualscript_clean.csv', row.names = FALSE)
 
 ```
 
@@ -205,12 +205,14 @@ write.csv(data_clean, 'data_sexualscript_clean.csv', row.names = FALSE) # safe i
 ```{r}
 
 # function for calculating the statistical mode
+
 mode <- function(codes){
   which.max(tabulate(codes))
 } 
 
 
 # summary of age
+
 data_clean %>% 
   summarise(
     mean = mean(age, na.rm = TRUE), 
@@ -226,6 +228,7 @@ data_clean %>%
 ```{r}
 
 # summary of age, grouped by gender
+
 data_clean %>% 
   group_by(gender) %>% 
   summarise(
