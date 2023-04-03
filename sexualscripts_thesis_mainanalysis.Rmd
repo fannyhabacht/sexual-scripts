@@ -808,7 +808,7 @@ anova(seabrook_cfa_higherfactor_invar_1, seabrook_cfa_higherfactor_invar_2, seab
 
 
 
-# Network Model
+# Network Model all scales
 ```{r}
 
 data_networkmodel <- data_hetero_malefemale %>% 
@@ -856,7 +856,7 @@ pars_networkmodel <- parameters(networkmodel_final) # all parameters
 ```
 
 
-## Graph Network Model
+## Graph Network Model all scales
 ```{r}
 
 networklabels <- c(
@@ -978,7 +978,7 @@ graph_network <- qgraph(network,
 ```
 
 
-## Node Centrality
+## Node Centrality 
 
 ### Centrality Plot
 ```{r}
@@ -1002,8 +1002,7 @@ network_strength <- graph_centrality_network$data %>% # take qgraph data
   arrange(desc(value)) %>% # arrange largest value first
   mutate(
     node = as.numeric(node)
-  ) %>% 
-  left_join(filter(item_text, scale == 'sexualscripts', by = c('node' = 'item')))
+  )
   
 ```
 
@@ -1020,8 +1019,7 @@ network_between <- graph_centrality_network$data %>%
   arrange(desc(value)) %>% 
   mutate(
     node = as.numeric(node)
-  ) %>% 
-  left_join(filter(item_text, scale == "sexualscripts"), by = c("node" = "item"))
+  )
 
 ```
 
@@ -1073,10 +1071,21 @@ ega_sexualscripts <-EGAnet::EGA(data_networkmodel,
                                 plot.EGA = TRUE,
                                 )
 
+
+# Walktrap algorithm
+
+cluster_walktrap(
+  graph = graph_network,
+  weights = NULL,
+  steps = 5, # no idea, how much would make sense here?
+  merges = TRUE,
+  membership = TRUE
+)
+
 ```
 
 
-# Network simulation - I'm very lost here
+## Network simulation all scales
 
 continuous edge weights = connectivity between nodes (positive large assumes same state of nodes)
 
@@ -1089,7 +1098,7 @@ Questions:
 What do I choose for thresholds, temperature, etc? Where do those values come from or how do I choose them?
 Do I need polychoric correlations for network estimation bc data will probably not be normal, plus it is ordinal, not continuous (lavaan: lavCor(), cor_auto)?
 
-## Baseline - why do I need to simulate this instead of using the actual obtained model?
+### Baseline - why do I need to simulate this instead of using the actual obtained model?
 ```{r}
 
 # depends on the results of the network model? 
@@ -1133,7 +1142,7 @@ hist_sexualscript_sim_base <- ggplot(
 ```
 
 
-# Persuasion
+## Persuasion network all scales
 ```{r}
 
 # depends on what node has highest strength?
@@ -1176,7 +1185,781 @@ t.test(sexualscript_sim_pers$total, sexualscript_sim_base$total) # comparing if 
 ```
 
 
+# Network Model AMMSA
+```{r}
+
+data_ammsa <- data_hetero_malefemale %>% 
+  select(
+    starts_with('ammsa')
+  )
+
+
+if (!file.exists('./rda/ammsa_networkmodel.rda')) {
+  
+  # model the variance-covariance matrix
+  networkmodel_ammsa <- varcov(data = data_ammsa,
+                               type = 'ggm', # Gaussian graphical model
+                               omega = 'full') # estimate every element freely
+
+
+  # run model and estimate structure --> time consuming
+  networkmodel_ammsa_final <- networkmodel_ammsa %>% 
+    runmodel() %>% 
+    prune(alpha = 0.05, recursive = TRUE) %>% # iterative process pruning non-significant parameters and refitting model
+    modelsearch(
+      criterion = 'bic', # optimal model with smallest BIC
+      prunealpha = 0.05, # min alpha, larger edges will be removed
+      addalpha = 0.05, # max alpha, smaller edges will be added
+    )
+
+  
+  save(networkmodel_ammsa_final, file = './rda/ammsa_networkmodel.rda')
+  
+  
+} else {
+  
+  load('./rda/ammsa_networkmodel.rda')
+  
+}
 
 
 
+fit_networkmodel_ammsa <- fit(networkmodel_ammsa_final) # fit indices
+
+pars_networkmodel_ammsa <- parameters(networkmodel_ammsa_final) # all parameters
+
+```
+
+
+## Graph Network Model AMMSA
+```{r}
+  
+network_ammsa <- getmatrix(
+  networkmodel_ammsa_final, 
+  'omega')
+
+
+graph_network_ammsa <- qgraph(network_ammsa,
+                              layout = 'spring',
+                              theme = 'colorblind',
+                              title = 'AMMSA-21 Network Model',
+                              labels = 1:21, 
+                              edge.labels = TRUE,
+                              edge.labels.cex = 0.4,
+                              vsize = 2,
+                              shape = 'circle',
+                              filetype = 'pdf',
+                              filename = 'ammsa_network')
+
+```
+
+
+## Node Centrality 
+
+### Centrality Plot
+```{r}
+
+graph_centrality_network_ammsa <- qgraph::centralityPlot(
+  graph_network_ammsa,
+  include = c('Strength', 'Closeness', 'Betweenness'))
+
+```
+
+
+### Strength
+```{r}
+
+network_strength_ammsa <- graph_centrality_network_ammsa$data %>% # take qgraph data
+  filter(measure == 'Strength') %>% # take strength data
+  arrange(desc(value)) %>% # arrange largest value first
+  mutate(
+    node = as.numeric(node)
+  )
+  
+```
+
+
+### Betweenness
+```{r}
+
+network_between_ammsa <- graph_centrality_network_ammsa$data %>% 
+  filter(measure == "Betweenness") %>% 
+  arrange(desc(value)) %>% 
+  mutate(
+    node = as.numeric(node)
+  )
+
+```
+
+
+## Network Connectivity (ASPL)
+```{r}
+
+spl_network_ammsa <- centrality(graph_network_ammsa)$ShortestPathLengths
+
+spl_network_ammsa <- spl_network_ammsa[upper.tri(spl_network_ammsa)]
+aspl_network_ammsa <- mean(spl_network_ammsa)
+
+```
+
+
+## Communities/Clusters
+```{r}
+
+# how many 'factors' would I have?
+
+parallel_ammsa <- fa.parallel(data_networkmodel_ammsa)
+
+
+# trying spinglass algorithm -  only allows items to be part of one community 
+
+set.seed(4321)
+
+communities_ammsa <- as.igraph(networkmodel_final_ammsa, attributes = TRUE) %>% 
+  spinglass.community()
+
+communities_ammsa$membership
+
+communities_graph_ammsa <- cluster_spinglass(graph_network_ammsa,
+                                             spins = 100,
+                                             start.temp = 1,
+                                             stop.temp = 0.01,
+                                             gamma = 1)
+
+
+# exploratory graph analysis
+
+ega_ammsa <-EGAnet::EGA(data_ammsa,
+                        model = 'glasso',
+                        algorithm = 'walktrap',
+                        plot.EGA = TRUE,
+                                )
+
+
+# Walktrap algorithm
+
+cluster_walktrap(
+  graph = graph_network_ammsa,
+  weights = NULL,
+  steps = 5, # no idea, how much would make sense here?
+  merges = TRUE,
+  membership = TRUE
+)
+
+```
+
+
+# Network Model Sakaluk
+```{r}
+
+data_sakaluk <- data_hetero_malefemale %>% 
+  select(
+    starts_with('sexualstandards'), 
+    starts_with('complexity'), 
+    starts_with('sexdrive'), 
+    starts_with('performanceandorgasm'), 
+    starts_with('player'), 
+    starts_with('emotionalsex')
+  )
+
+
+if (!file.exists('./rda/sakaluk_networkmodel.rda')) {
+  
+  # model the variance-covariance matrix
+  networkmodel_sakaluk <- varcov(data = data_sakaluk,
+                                 type = 'ggm', # Gaussian graphical model
+                                 omega = 'full') # estimate every element freely
+
+
+  # run model and estimate structure --> time consuming
+  networkmodel_sakaluk_final <- networkmodel_sakaluk %>% 
+    runmodel() %>% 
+    prune(alpha = 0.05, recursive = TRUE) %>% # iterative process pruning non-significant parameters and refitting model
+    modelsearch(
+      criterion = 'bic', # optimal model with smallest BIC
+      prunealpha = 0.05, # min alpha, larger edges will be removed
+      addalpha = 0.05, # max alpha, smaller edges will be added
+    )
+
+  
+  save(networkmodel_sakaluk_final, file = './rda/sakaluk_networkmodel.rda')
+  
+  
+} else {
+  
+  load('./rda/sakaluk_networkmodel.rda')
+  
+}
+
+
+
+fit_networkmodel_sakaluk <- fit(networkmodel_sakaluk_final) # fit indices
+
+pars_networkmodel_sakaluk <- parameters(networkmodel_sakaluk_final) # all parameters
+
+```
+
+
+## Graph Network Model Sakaluk
+```{r}
+
+labels_sakaluk <- c(
+  'sexst_1',
+  'sexst_2',
+  'sexst_3',
+  'sexst_4',
+  'sexst_5',
+  'sexst_6',
+  'sexst_7',
+  'sexst_8',
+  'sexst_9',
+  'comp_1',
+  'comp_2',
+  'comp_3',
+  'comp_4',
+  'comp_5',
+  'comp_6',
+  'comp_7',
+  'sexd_1',
+  'sexd_2',
+  'sexd_3',
+  'sexd_4',
+  'sexd_5',
+  'perf_1',
+  'perf_2',
+  'perf_3',
+  'perf_4',
+  'play_1',
+  'play_2',
+  'play_3',
+  'play_4',
+  'emse_1',
+  'emse_2',
+  'emse_3',
+  'emse_4',
+)
+
+
+network_sakaluk <- getmatrix(
+  networkmodel_sakaluk_final, 
+  'omega')
+
+
+graph_network_sakaluk <- qgraph(network_sakaluk,
+                                layout = 'spring',
+                                theme = 'colorblind',
+                                title = 'Network Model Sexual Scripts by Sakaluk et al. (2014)',
+                                labels = labels_sakaluk, 
+                                edge.labels = TRUE,
+                                edge.labels.cex = 0.4,
+                                vsize = 2,
+                                shape = 'circle',
+                                filetype = 'pdf',
+                                filename = 'sakaluk_network')
+
+```
+
+
+## Node Centrality 
+
+### Centrality Plot
+```{r}
+
+graph_centrality_network_sakaluk <- qgraph::centralityPlot(
+  graph_network_sakaluk,
+  include = c('Strength', 'Closeness', 'Betweenness'))
+
+```
+
+
+### Strength
+```{r}
+
+network_strength_sakaluk <- graph_centrality_network_sakaluk$data %>% # take qgraph data
+  filter(measure == 'Strength') %>% # take strength data
+  arrange(desc(value)) %>% # arrange largest value first
+  mutate(
+    node = as.numeric(node)
+  )
+
+```
+
+
+### Betweenness
+```{r}
+
+network_between_sakaluk <- graph_centrality_network_sakaluk$data %>% 
+  filter(measure == "Betweenness") %>% 
+  arrange(desc(value)) %>% 
+  mutate(
+    node = as.numeric(node)
+  )
+
+```
+
+
+## Network Connectivity (ASPL)
+```{r}
+
+spl_network_sakaluk <- centrality(graph_network_sakaluk)$ShortestPathLengths
+
+spl_network_sakaluk <- spl_network_sakaluk[upper.tri(spl_network_sakaluk)]
+aspl_network_sakaluk <- mean(spl_network_sakaluk)
+
+```
+
+
+## Communities/Clusters
+```{r}
+
+# how many 'factors' would I have?
+
+parallel_sakaluk <- fa.parallel(data_networkmodel_sakaluk)
+
+
+# trying spinglass algorithm -  only allows items to be part of one community 
+
+set.seed(5432)
+
+communities_sakaluk <- as.igraph(networkmodel_final_sakaluk, attributes = TRUE) %>% 
+  spinglass.community()
+
+communities_sakaluk$membership
+
+communities_graph_sakaluk <- cluster_spinglass(graph_network_sakaluk,
+                                             spins = 100,
+                                             start.temp = 1,
+                                             stop.temp = 0.01,
+                                             gamma = 1)
+
+
+# exploratory graph analysis
+
+ega_sakaluk <-EGAnet::EGA(data_sakaluk,
+                        model = 'glasso',
+                        algorithm = 'walktrap',
+                        plot.EGA = TRUE)
+
+
+# Walktrap algorithm
+
+cluster_walktrap(
+  graph = graph_network_sakaluk,
+  weights = NULL,
+  steps = 5, # no idea, how much would make sense here?
+  merges = TRUE,
+  membership = TRUE
+)
+
+```
+
+
+# Network Model Seabrook
+```{r}
+
+data_seabrook <- data_hetero_malefemale %>% 
+  select(
+    starts_with('courtship'), 
+    starts_with('initiators'), 
+    starts_with('appearance'), 
+    starts_with('doublestandards')
+  )
+
+
+if (!file.exists('./rda/seabrook_networkmodel.rda')) {
+  
+  # model the variance-covariance matrix
+  networkmodel_seabrook <- varcov(data = data_seabrook,
+                                 type = 'ggm', # Gaussian graphical model
+                                 omega = 'full') # estimate every element freely
+
+
+  # run model and estimate structure --> time consuming
+  networkmodel_seabrook_final <- networkmodel_seabrook %>% 
+    runmodel() %>% 
+    prune(alpha = 0.05, recursive = TRUE) %>% # iterative process pruning non-significant parameters and refitting model
+    modelsearch(
+      criterion = 'bic', # optimal model with smallest BIC
+      prunealpha = 0.05, # min alpha, larger edges will be removed
+      addalpha = 0.05, # max alpha, smaller edges will be added
+    )
+
+  
+  save(networkmodel_seabrook_final, file = './rda/seabrook_networkmodel.rda')
+  
+  
+} else {
+  
+  load('./rda/seabrook_networkmodel.rda')
+  
+}
+
+
+
+fit_networkmodel_seabrook <- fit(networkmodel_seabrook_final) # fit indices
+
+pars_networkmodel_seabrook <- parameters(networkmodel_seabrook_final) # all parameters
+
+```
+
+
+## Graph Network Model Seabrook
+```{r}
+
+labels_seabrook <- c(
+  'cour_1',
+  'cour_2',
+  'cour_3',
+  'cour_4',
+  'cour_5',
+  'cour_6',
+  'cour_7',
+  'cour_8',
+  'init_1',
+  'init_2',
+  'init_3',
+  'init_4',
+  'appe_1',
+  'appe_2',
+  'appe_3',
+  'appe_4',
+  'appe_5',
+  'dost_1',
+  'dost_2',
+  'dost_3',
+  'dost_4',
+  'dost_5',
+)
+
+
+network_seabrook <- getmatrix(
+  networkmodel_seabrook_final, 
+  'omega')
+
+
+graph_network_seabrook <- qgraph(network_seabrook,
+                                layout = 'spring',
+                                theme = 'colorblind',
+                                title = 'Network Model Sexual Scripts by Seabrook et al. (2016)',
+                                labels = labels_seabrook, 
+                                edge.labels = TRUE,
+                                edge.labels.cex = 0.4,
+                                vsize = 2,
+                                shape = 'circle',
+                                filetype = 'pdf',
+                                filename = 'seabrook_network')
+
+```
+
+
+## Node Centrality 
+
+### Centrality Plot
+```{r}
+
+graph_centrality_network_seabrook <- qgraph::centralityPlot(
+  graph_network_seabrook,
+  include = c('Strength', 'Closeness', 'Betweenness'))
+
+```
+
+
+### Strength
+```{r}
+
+network_strength_seabrook <- graph_centrality_network_seabrook$data %>% # take qgraph data
+  filter(measure == 'Strength') %>% # take strength data
+  arrange(desc(value)) %>% # arrange largest value first
+  mutate(
+    node = as.numeric(node)
+  )
+
+```
+
+
+### Betweenness
+```{r}
+
+network_between_seabrook <- graph_centrality_network_seabrook$data %>% 
+  filter(measure == "Betweenness") %>% 
+  arrange(desc(value)) %>% 
+  mutate(
+    node = as.numeric(node)
+  )
+
+```
+
+
+## Network Connectivity (ASPL)
+```{r}
+
+spl_network_seabrook <- centrality(graph_network_seabrook)$ShortestPathLengths
+
+spl_network_seabrook <- spl_network_seabrook[upper.tri(spl_network_seabrook)]
+aspl_network_seabrook <- mean(spl_network_seabrook)
+
+```
+
+
+## Communities/Clusters
+```{r}
+
+# how many 'factors' would I have?
+
+parallel_seabrook <- fa.parallel(data_networkmodel_seabrook)
+
+
+# trying spinglass algorithm -  only allows items to be part of one community 
+
+set.seed(6543)
+
+communities_seabrook <- as.igraph(networkmodel_final_seabrook, attributes = TRUE) %>% 
+  spinglass.community()
+
+communities_seabrook$membership
+
+communities_graph_seabrook <- cluster_spinglass(graph_network_seabrook,
+                                             spins = 100,
+                                             start.temp = 1,
+                                             stop.temp = 0.01,
+                                             gamma = 1)
+
+
+# exploratory graph analysis
+
+ega_seabrook <-EGAnet::EGA(data_seabrook,
+                           model = 'glasso',
+                           algorithm = 'walktrap',
+                           plot.EGA = TRUE)
+
+
+# Walktrap algorithm
+
+cluster_walktrap(
+  graph = graph_network_seabrook,
+  weights = NULL,
+  steps = 5, # no idea, how much would make sense here?
+  merges = TRUE,
+  membership = TRUE
+)
+
+```
+
+
+# Network Model Krahé
+```{r}
+
+data_krahe <- data_hetero_malefemale %>% 
+  select(
+    starts_with('arranged'), 
+    starts_with('situation'), 
+    starts_with('sex'), 
+    starts_with('sexlocation'), 
+    starts_with('contraception'), 
+    'metbefore', 
+    'knownbefore',
+    starts_with('substances'), 
+    starts_with('drunkstoned'), 
+    starts_with('consent'), 
+    starts_with('afterfeeling'), 
+    starts_with('outlook')) 
+  )
+
+
+if (!file.exists('./rda/krahe_networkmodel.rda')) {
+  
+  # model the variance-covariance matrix
+  networkmodel_krahe <- varcov(data = data_krahe,
+                                 type = 'ggm', # Gaussian graphical model
+                                 omega = 'full') # estimate every element freely
+
+
+  # run model and estimate structure --> time consuming
+  networkmodel_krahe_final <- networkmodel_krahe %>% 
+    runmodel() %>% 
+    prune(alpha = 0.05, recursive = TRUE) %>% # iterative process pruning non-significant parameters and refitting model
+    modelsearch(
+      criterion = 'bic', # optimal model with smallest BIC
+      prunealpha = 0.05, # min alpha, larger edges will be removed
+      addalpha = 0.05, # max alpha, smaller edges will be added
+    )
+
+  
+  save(networkmodel_krahe_final, file = './rda/krahe_networkmodel.rda')
+  
+  
+} else {
+  
+  load('./rda/krahe_networkmodel.rda')
+  
+}
+
+
+
+fit_networkmodel_krahe <- fit(networkmodel_krahe_final) # fit indices
+
+pars_networkmodel_krahe <- parameters(networkmodel_krahe_final) # all parameters
+
+```
+
+
+## Graph Network Model Krahé
+```{r}
+
+labels_krahe <- c(
+  'arra_1',
+  'situ_1',
+  'situ_2',
+  'situ_3',
+  'sex_1',
+  'sex_2',
+  'sex_3',
+  'sex_4',
+  'sex_5',
+  'sexlo_1',
+  'sexlo_2',
+  'sexlo_3',
+  'sexlo_4',
+  'sexlo_5',
+  'sexlo_6',
+  'cont_1',
+  'cont_2',
+  'cont_3',
+  'cont_4',
+  'cont_5',
+  'met_1',
+  'known_1',
+  'subst_1',
+  'subst_2',
+  'subst_3',
+  'subst_4',
+  'drunk_1',
+  'drunk_2',
+  'cboy_1',
+  'cboy_2',
+  'cgirl_1',
+  'cgirl_2',
+  'after_1',
+  'after_2',
+  'outg_1',
+  'outg_2',
+  'outg_3',
+  'outb_1',
+  'outb_2',
+  'outb_3'
+)
+
+
+network_krahe <- getmatrix(
+  networkmodel_krahe_final, 
+  'omega')
+
+
+graph_network_krahe <- qgraph(network_krahe,
+                                layout = 'spring',
+                                theme = 'colorblind',
+                                title = 'Network Model Sexual Scripts by Krahé et al. (2007)',
+                                labels = labels_krahe, 
+                                edge.labels = TRUE,
+                                edge.labels.cex = 0.4,
+                                vsize = 2,
+                                shape = 'circle',
+                                filetype = 'pdf',
+                                filename = 'krahe_network')
+
+```
+
+
+## Node Centrality 
+
+### Centrality Plot
+```{r}
+
+graph_centrality_network_krahe <- qgraph::centralityPlot(
+  graph_network_krahe,
+  include = c('Strength', 'Closeness', 'Betweenness'))
+
+```
+
+
+### Strength
+```{r}
+
+network_strength_krahe <- graph_centrality_network_krahe$data %>% # take qgraph data
+  filter(measure == 'Strength') %>% # take strength data
+  arrange(desc(value)) %>% # arrange largest value first
+  mutate(
+    node = as.numeric(node)
+  )
+
+```
+
+
+### Betweenness
+```{r}
+
+network_between_krahe <- graph_centrality_network_krahe$data %>% 
+  filter(measure == "Betweenness") %>% 
+  arrange(desc(value)) %>% 
+  mutate(
+    node = as.numeric(node)
+  )
+
+```
+
+
+## Network Connectivity (ASPL)
+```{r}
+
+spl_network_krahe <- centrality(graph_network_krahe)$ShortestPathLengths
+
+spl_network_krahe <- spl_network_krahe[upper.tri(spl_network_krahe)]
+aspl_network_krahe <- mean(spl_network_krahe)
+
+```
+
+
+## Communities/Clusters
+```{r}
+
+# how many 'factors' would I have?
+
+parallel_krahe <- fa.parallel(data_networkmodel_krahe)
+
+
+# trying spinglass algorithm -  only allows items to be part of one community 
+
+set.seed(7654)
+
+communities_krahe <- as.igraph(networkmodel_final_krahe, attributes = TRUE) %>% 
+  spinglass.community()
+
+communities_krahe$membership
+
+communities_graph_krahe <- cluster_spinglass(graph_network_krahe,
+                                             spins = 100,
+                                             start.temp = 1,
+                                             stop.temp = 0.01,
+                                             gamma = 1)
+
+
+# exploratory graph analysis
+
+ega_krahe <-EGAnet::EGA(data_krahe,
+                           model = 'glasso',
+                           algorithm = 'walktrap',
+                           plot.EGA = TRUE)
+
+
+# Walktrap algorithm
+
+cluster_walktrap(
+  graph = graph_network_krahe,
+  weights = NULL,
+  steps = 5, # no idea, how much would make sense here?
+  merges = TRUE,
+  membership = TRUE
+)
+
+```
 

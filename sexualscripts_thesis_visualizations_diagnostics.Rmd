@@ -16,7 +16,7 @@ This code includes preparing the dataset further for the main analysis (total sc
 # Packages
 ```{r}
 
-packages <- c('tidyr', 'readr', 'dplyr', 'ggplot2', 'MVN', 'psych', 'cowplot', 'naniar', 'misty')
+packages <- c('tidyr', 'readr', 'dplyr', 'ggplot2', 'MVN', 'psych', 'cowplot', 'naniar', 'misty', 'missMethods')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -104,7 +104,7 @@ data_heteroscales <- data_onlyhetero_malefemale %>%
 ```
 
 
-## Missing data screening
+## Missing data screening and imputation
 ```{r}
 
 # sum of missings
@@ -121,6 +121,13 @@ sapply(data_heteroscales, function(x) which(is.na(x)))
 # Little's MCAR test
 
 na.test(data_heteroscales, output = TRUE)
+
+
+# EM imputation
+
+impute_EM(data_heteroscales,
+          stochastic = FALSE,
+          )
 
 ```
 
