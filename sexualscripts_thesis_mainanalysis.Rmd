@@ -16,7 +16,7 @@ This code includes the main analysis of my master thesis, including factor analy
 # Packages
 ```{r}
 
-packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'igraph', 'IsingSampler', 'psychonetrics', 'EGAnet')
+packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'igraph', 'IsingSampler', 'psychonetrics', 'EGAnet', 'EFAtools')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -292,10 +292,6 @@ figure_sakaluk_cfa_1factor_fit <- semPaths(
 
 
 ## Sexual Scripts Sakaluk 6-factor model
-
-Paper mentioned they allowed error-term correlations, but don't specify which ones
-Do I ignore that or do I use modification indices?
-
 ```{r}
 
 # model specification
@@ -616,9 +612,6 @@ figure_seabrook_cfa_4factor_fit <- semPaths(
 
 
 ## Sexual Scripts Seabrook higher order factor model
-
-Are the 1st order factors supposed to be correlated, or not?
-
 ```{r}
 
 # model specification
@@ -636,6 +629,18 @@ seabrook_cfa_higherfactor <- ('
                 doublestandards =~ doublestandards_1 + doublestandards_2 + doublestandards_3 + doublestandards_4 + doublestandards_5
                 
                 sexualscript =~ courtship + initiators + appearance + doublestandards
+                
+                
+                # covariances
+                
+                courtship ~~ 0*initiators
+                courtship ~~ 0*appearance
+                courtship ~~ 0*doublestandards
+                
+                initiators ~~ 0*appearance
+                initiators ~~ 0*doublestandards
+                
+                appearance ~~ 0*doublestandards
                 
                 ')
 
@@ -807,6 +812,75 @@ anova(seabrook_cfa_higherfactor_invar_1, seabrook_cfa_higherfactor_invar_2, seab
 ```
 
 
+# Sexual Scripts Krahe EFA
+```{r}
+
+data_krahe <- data_hetero_malefemale %>% 
+  select(
+    starts_with('arranged'), 
+    starts_with('situation'), 
+    starts_with('sex_'), 
+    starts_with('sexlocation'), 
+    starts_with('contraception'), 
+    'metbefore', 
+    'knownbefore',
+    starts_with('substances'), 
+    starts_with('drunkstoned'), 
+    starts_with('consent'), 
+    starts_with('afterfeeling'), 
+    starts_with('outlook')
+  )
+
+```
+
+
+```{r}
+
+cormat_data_krahe <- cor(data_krahe)
+
+det(cormat_data_krahe)
+
+KMO(cormat_data_krahe)
+
+BARTLETT(data_krahe)
+
+```
+
+
+```{r}
+
+# Eigenvalues > 1 (Kaiser criterion)
+
+ev_krahe <- eigen(cormat_data_krahe)
+
+ev_krahe$values
+
+
+# Scree Plot
+
+scree(data_krahe, pc = FALSE)
+
+
+# Parallel analysis
+
+fa.parallel(data_krahe, fa = 'fa')
+
+```
+
+
+```{r}
+
+efa_krahe_fit <- efa(data = data_krahe,
+                     nfactors = 5, # change depending how many factors are suggested
+                     sample.cov = cormat_data_krahe,
+                     rotation = 'oblimin', # oblique rotation bc factors are obv related
+                     output = 'lavaan'
+                     )
+
+summary(efa_krahe_fit)
+
+```
+
 
 # Network Model all scales
 ```{r}
@@ -957,7 +1031,7 @@ networklabels <- c(
   'outb_3'
 )
 
-  
+
 network <- getmatrix(
   networkmodel_final, 
   'omega')
@@ -1046,6 +1120,10 @@ aspl_network <- mean(spl_network)
 
 parallel_sexualscripts <- fa.parallel(data_networkmodel)
 
+```
+
+
+```{r}
 
 # trying spinglass algorithm -  only allows items to be part of one community 
 
@@ -1061,7 +1139,10 @@ communities_graph <- cluster_spinglass(graph_network,
                                        start.temp = 1,
                                        stop.temp = 0.01,
                                        gamma = 1)
+```
 
+
+```{r}
 
 # exploratory graph analysis
 
@@ -1071,6 +1152,10 @@ ega_sexualscripts <-EGAnet::EGA(data_networkmodel,
                                 plot.EGA = TRUE,
                                 )
 
+```
+
+
+```{r}
 
 # Walktrap algorithm
 
@@ -1081,106 +1166,6 @@ cluster_walktrap(
   merges = TRUE,
   membership = TRUE
 )
-
-```
-
-
-## Network simulation all scales
-
-continuous edge weights = connectivity between nodes (positive large assumes same state of nodes)
-
-continuous thresholds of nodes = the higher the threshold, the stronger the disposition that this node is 'on'
-
-temperature parameter = degree of randomness in the system; when beta shrinks to 0, all states become equally likely (= high degree of randomness)
-
-
-Questions:
-What do I choose for thresholds, temperature, etc? Where do those values come from or how do I choose them?
-Do I need polychoric correlations for network estimation bc data will probably not be normal, plus it is ordinal, not continuous (lavaan: lavCor(), cor_auto)?
-
-### Baseline - why do I need to simulate this instead of using the actual obtained model?
-```{r}
-
-# depends on the results of the network model? 
-# what the actual sample distribution looks like? 
-
-set.seed(1234) # to have the same random numbers again when re-running the code
-
-
-sexualscript_sim_base <- IsingSampler(
-  10000, # sample size I want
-  getmatrix(networkmodel_final, 'omega'),
-  c(rep(-,)), # where do the thresholds come from? min and max est in the network pars?
-  responses = c(0, 1) # meaning no negative responses?
-  )
-
-
-sexualscript_sim_base <- sexualscript_sim_base %>% # making a dataframe out of it
-  as.data.frame()
-
-
-sexualscript_sim_base$total <- rowSums(sexualscript_sim_base)
-
-
-hist_sexualscript_sim_base <- ggplot( 
-  ammsa_sim_base,
-  aes(
-    x = total
-    )) +
-  geom_histogram(
-    binwidth = 1,
-    color = 'black',
-    fill = 'grey'
-  ) +
-  scale_x_continuous(
-    limits = c(),
-    breaks = seq()
-  ) +
-  theme_classic()
-
-
-```
-
-
-## Persuasion network all scales
-```{r}
-
-# depends on what node has highest strength?
-
-
-sexualscript_sim_pers <- IsingSampler(
-  10000, 
-  getmatrix(networkmodel_final, 'omega'),
-  c(rep(,), , rep()), # what are the thresholds, beta etc.?
-  responses = c(0, 1))
-
-
-sexualscript_sim_pers <- sexualscript_sim_pers %>% 
-  as.data.frame()
-
-
-sexualscript_sim_pers$total <- rowSums(sexualscript_sim_pers)
-
-hist_sexualscript_sim_pers <- 
-  ggplot(sexualscript_sim_pers,
-         aes(
-           x = total
-         )) +
-  geom_histogram(
-    binwidth = 1
-    color = 'black',
-    fill = 'grey'
-  ) +
-  scale_x_continuous(
-    limits = c(),
-    breaks = seq()
-  ) +
-  theme_classic()
-
-
-
-
-t.test(sexualscript_sim_pers$total, sexualscript_sim_base$total) # comparing if theres a difference overall between baseline and persuasion
 
 ```
 
@@ -1310,6 +1295,10 @@ aspl_network_ammsa <- mean(spl_network_ammsa)
 
 parallel_ammsa <- fa.parallel(data_networkmodel_ammsa)
 
+```
+
+
+```{r}
 
 # trying spinglass algorithm -  only allows items to be part of one community 
 
@@ -1326,6 +1315,10 @@ communities_graph_ammsa <- cluster_spinglass(graph_network_ammsa,
                                              stop.temp = 0.01,
                                              gamma = 1)
 
+```
+
+
+```{r}
 
 # exploratory graph analysis
 
@@ -1333,8 +1326,12 @@ ega_ammsa <-EGAnet::EGA(data_ammsa,
                         model = 'glasso',
                         algorithm = 'walktrap',
                         plot.EGA = TRUE,
-                                )
+                        )
 
+```
+
+
+```{r}
 
 # Walktrap algorithm
 
@@ -1516,6 +1513,10 @@ aspl_network_sakaluk <- mean(spl_network_sakaluk)
 
 parallel_sakaluk <- fa.parallel(data_networkmodel_sakaluk)
 
+```
+
+
+```{r}
 
 # trying spinglass algorithm -  only allows items to be part of one community 
 
@@ -1532,6 +1533,10 @@ communities_graph_sakaluk <- cluster_spinglass(graph_network_sakaluk,
                                              stop.temp = 0.01,
                                              gamma = 1)
 
+```
+
+
+```{r}
 
 # exploratory graph analysis
 
@@ -1540,6 +1545,10 @@ ega_sakaluk <-EGAnet::EGA(data_sakaluk,
                         algorithm = 'walktrap',
                         plot.EGA = TRUE)
 
+```
+
+
+```{r}
 
 # Walktrap algorithm
 
@@ -1708,6 +1717,10 @@ aspl_network_seabrook <- mean(spl_network_seabrook)
 
 parallel_seabrook <- fa.parallel(data_networkmodel_seabrook)
 
+```
+
+
+```{r}
 
 # trying spinglass algorithm -  only allows items to be part of one community 
 
@@ -1724,6 +1737,10 @@ communities_graph_seabrook <- cluster_spinglass(graph_network_seabrook,
                                              stop.temp = 0.01,
                                              gamma = 1)
 
+```
+
+
+```{r}
 
 # exploratory graph analysis
 
@@ -1732,6 +1749,10 @@ ega_seabrook <-EGAnet::EGA(data_seabrook,
                            algorithm = 'walktrap',
                            plot.EGA = TRUE)
 
+```
+
+
+```{r}
 
 # Walktrap algorithm
 
@@ -1753,7 +1774,7 @@ data_krahe <- data_hetero_malefemale %>%
   select(
     starts_with('arranged'), 
     starts_with('situation'), 
-    starts_with('sex'), 
+    starts_with('sex_'), 
     starts_with('sexlocation'), 
     starts_with('contraception'), 
     'metbefore', 
@@ -1762,7 +1783,7 @@ data_krahe <- data_hetero_malefemale %>%
     starts_with('drunkstoned'), 
     starts_with('consent'), 
     starts_with('afterfeeling'), 
-    starts_with('outlook')) 
+    starts_with('outlook')
   )
 
 
@@ -1927,6 +1948,11 @@ aspl_network_krahe <- mean(spl_network_krahe)
 parallel_krahe <- fa.parallel(data_networkmodel_krahe)
 
 
+```
+
+
+```{r}
+
 # trying spinglass algorithm -  only allows items to be part of one community 
 
 set.seed(7654)
@@ -1942,6 +1968,10 @@ communities_graph_krahe <- cluster_spinglass(graph_network_krahe,
                                              stop.temp = 0.01,
                                              gamma = 1)
 
+```
+
+
+```{r}
 
 # exploratory graph analysis
 
@@ -1950,6 +1980,10 @@ ega_krahe <-EGAnet::EGA(data_krahe,
                            algorithm = 'walktrap',
                            plot.EGA = TRUE)
 
+```
+
+
+```{r}
 
 # Walktrap algorithm
 

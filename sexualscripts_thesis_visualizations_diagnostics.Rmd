@@ -74,7 +74,7 @@ data_onlyhetero_malefemale <- data_onlyhetero %>%
 ## Extract only scales (remove demographics)
 ```{r}
 
-data_heteroscales <- data_onlyhetero_malefemale %>% 
+data_heteroscales_raw <- data_onlyhetero_malefemale %>% 
   select(
     'id', 
     starts_with('sexualstandards'), 
@@ -109,25 +109,27 @@ data_heteroscales <- data_onlyhetero_malefemale %>%
 
 # sum of missings
 
-is.na(data_heteroscales) %>%
+is.na(data_heteroscales_raw) %>%
   sum()
 
 
 # location of missing values for each column
 
-sapply(data_heteroscales, function(x) which(is.na(x)))
+sapply(data_heteroscales_raw, function(x) which(is.na(x)))
 
 
 # Little's MCAR test
 
-na.test(data_heteroscales, output = TRUE)
+na.test(data_heteroscales_raw, output = TRUE)
 
 
 # EM imputation
 
-impute_EM(data_heteroscales,
-          stochastic = FALSE,
-          )
+set.seed(9191)
+
+data_heteroscales <- impute_EM(data_heteroscales_raw,
+                            stochastic = FALSE
+                            )
 
 ```
 
