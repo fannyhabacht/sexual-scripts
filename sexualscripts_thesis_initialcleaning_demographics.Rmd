@@ -38,10 +38,11 @@ data <- read_csv('data_sexualscript_raw.csv') # load raw data
 
 data_clean <- data %>%
   slice(-1, -2) %>% # remove first two rows (because they are not actual responses)
-  filter(Progress == 100) %>% # removing unfinished surveys
+  filter(Progress == 100) %>%  # removing unfinished surveys
+  filter(attention_check == 7 & attention_check_7_TEXT == '+' | attention_check == 7 & attention_check_7_TEXT == 'a plus sign' | attention_check == 7 & attention_check_7_TEXT == 'plus sign') %>% # removing attention check fails
   mutate(id = 1:nrow(.)) %>% # adding id column
   select(
-    'id', 
+    'id',
     'Duration (in seconds)',
     'age',
     'gender',
@@ -520,6 +521,19 @@ hist_agebygender_heteromalefemale
 
 ```
 
+
+### Gender hetero male/female
+
+1 = male
+2 = female
+
+```{r}
+
+table(data_onlyhetero_malefemale$gender) # absolute values
+
+prop.table(table(data_onlyhetero_malefemale$gender))*100 # percentages
+
+```
 
 ### Relationship style hetero male/female
 

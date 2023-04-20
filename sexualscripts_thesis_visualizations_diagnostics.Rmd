@@ -90,14 +90,15 @@ data_heteroscales_raw <- data_onlyhetero_malefemale %>%
     starts_with('ammsa'), 
     starts_with('arranged'), 
     starts_with('situation'), 
-    starts_with('sex'), 
+    starts_with('sex_'), 
     starts_with('sexlocation'), 
     starts_with('contraception'), 
     'metbefore', 
     'knownbefore',
     starts_with('substances'), 
     starts_with('drunkstoned'), 
-    starts_with('consent'), 
+    starts_with('consentboy'),
+    starts_with('consentgirl'), 
     starts_with('afterfeeling'), 
     starts_with('outlook')) 
 
@@ -226,8 +227,12 @@ hist_ammsa <-
     fill = 'grey'
   ) +
   scale_x_continuous(
-    limits = c(1, 7),
+    limits = c(0, 8),
     breaks = 1:7
+  ) +
+    scale_y_continuous(
+    limits = c(0, 50),
+    breaks = c(10, 20, 30, 40, 50)
   ) +
   labs(
     x = 'AMMSA Total',
@@ -252,13 +257,17 @@ hist_sakaluktotal <-
            x = sakaluk_total
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .2,
     color = 'black',
     fill = 'grey'
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
+  ) +
+    scale_y_continuous(
+    limits = c(0, 100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Sexual Scripts Total',
@@ -281,17 +290,17 @@ hist_sakaluksexualstandards <-
            x = sakaluk_sexualstandards
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .2,
     color = 'black',
     fill = 'grey'
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0, 100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Sexual Standards',
@@ -316,17 +325,17 @@ hist_sakalukcomplexity <-
            x = sakaluk_complexity
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .15,
     color = 'black',
     fill = 'grey'
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0, 100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Simplicity',
@@ -351,17 +360,17 @@ hist_sakaluksexdrive <-
            x = sakaluk_sexdrive
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .2,
     color = 'black',
     fill = 'grey'
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0, 100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Sex Drive',
@@ -391,12 +400,12 @@ hist_sakalukperformance <-
     fill = 'grey'
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0, 100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Performance and Orgasm',
@@ -426,12 +435,12 @@ hist_sakalukplayer <-
     fill = 'grey'
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0, 100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Player',
@@ -456,17 +465,17 @@ hist_sakalukemotionalsex <-
            x = sakaluk_emotionalsex
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = 0.4,
     color = "black",
     fill = "grey"
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0, 100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Emotional Sex',
@@ -503,17 +512,17 @@ hist_seabrooktotal <-
            x = seabrook_total
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .2,
     color = "black",
     fill = "grey"
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0,100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Total',
@@ -521,6 +530,7 @@ hist_seabrooktotal <-
     title = 'Sexual Scripts (Seabrook et al., 2016)'
   ) +
   theme_classic()
+
 
 hist_seabrooktotal
 
@@ -536,17 +546,17 @@ hist_seabrookcourtship <-
            x = seabrook_courtship
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .2,
     color = "black",
     fill = "grey"
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0,100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Courtship',
@@ -576,12 +586,12 @@ hist_seabrookinitiators <-
     fill = "grey"
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0,100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Initiators',
@@ -606,17 +616,17 @@ hist_seabrookappearance <-
            x = seabrook_appearance
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .2,
     color = "black",
     fill = "grey"
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0,100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Appearance',
@@ -641,17 +651,17 @@ hist_seabrookdoublestandards <-
            x = seabrook_doublestandards
          )) +
   geom_histogram(
-    binwidth = .25,
+    binwidth = .2,
     color = "black",
     fill = "grey"
   ) +
   scale_x_continuous(
-    limits = c(1, 6),
+    limits = c(0, 7),
     breaks = 1:6
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 20, 30, 40, 50)
+    limits = c(0,100),
+    breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
   ) +
   labs(
     x = 'Double Standards',
@@ -714,17 +724,17 @@ krahe_scale %>%
     ~ item,
     nrow = 5) +
   geom_histogram(
-    binwidth = 0.25,
+    binwidth = 1,
     color = "black",
     fill = "grey"
   ) +
   scale_x_continuous(
-    limits = c (1, 5),
+    limits = c (0, 6),
     breaks = 1:5
   ) +
   scale_y_continuous(
-    limits = c(0,50),
-    breaks = c(10, 30, 50)
+    limits = c(0, 400),
+    breaks = c(0, 100, 200, 300, 400)
   ) +
   labs(
     x = 'Value',
@@ -743,8 +753,10 @@ krahe_scale %>%
 ## Ammsa total
 ```{r}
 
-ammsa_scale <- data_onlyhetero_malefemale %>% 
-  select(starts_with('ammsa'))
+ammsa_scale <- data_heteroscales %>% 
+  select(starts_with('ammsa')) %>% 
+  select(
+    - 'ammsa_total')
   
 
 # Normality and Outliers
@@ -802,7 +814,7 @@ arrange(mahal_data_ammsa, by = desc(mahal_ammsa))
 ## Sakaluk total
 ```{r}
 
-sakaluk_scale <- data_onlyhetero_malefemale %>% 
+sakaluk_scale <- data_heteroscales %>% 
   select(
     starts_with('sexualstandards'), 
     starts_with('complexity'), 
@@ -869,7 +881,7 @@ arrange(mahal_data_sakaluktotal, by = desc(mahal_sakaluktotal)) # arrange descen
 ## Seabrook total
 ```{r}
 
-seabrook_scale <- data_onlyhetero_malefemale %>% 
+seabrook_scale <- data_heteroscales %>% 
   select(
     starts_with('courtship'), 
     starts_with('initiators'), 

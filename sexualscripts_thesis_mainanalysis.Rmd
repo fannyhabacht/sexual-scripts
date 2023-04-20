@@ -16,7 +16,7 @@ This code includes the main analysis of my master thesis, including factor analy
 # Packages
 ```{r}
 
-packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'igraph', 'IsingSampler', 'psychonetrics', 'EGAnet', 'EFAtools')
+packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'igraph', 'IsingSampler', 'psychonetrics', 'EGAnet', 'EFAtools', 'missMethods', 'norm')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -47,12 +47,21 @@ sum(
 )
 
 
+# impute missing values
+
+set.seed(9191)
+
+data_hetero_malefemale <- impute_EM(data_hetero_malefemale,stochastic = FALSE)
+
+write.csv(data_hetero_malefemale, 'data_sexualscript_mainanalysis.csv', row.names = FALSE)
+
+
 # check the class of each column
 
 sapply(data_hetero_malefemale, class) 
 
-```
 
+```
 
 
 # Factor Analyses
@@ -281,7 +290,7 @@ figure_sakaluk_cfa_1factor_fit <- semPaths(
   curvePivot = TRUE, # making curved arrows
   esize = 1, # thickness of arrows
   nCharNodes = 8, # uses 8 characters of the name in the boxes
-  edge.label.cex = 1,
+  edge.label.cex = 0.75,
   residuals = FALSE, # does not show the error terms/residuals
   sizeMan = 5, # width of manifest var box
   sizeLat = 10,
@@ -394,11 +403,11 @@ figure_sakaluk_cfa_6factor_fit <- semPaths(
   curvePivot = TRUE, # making curved arrows
   esize = 1, # thickness of arrows
   nCharNodes = 8, # uses 8 characters of the name in the boxes
-  edge.label.cex = 1,
+  edge.label.cex = 0.5,
   residuals = FALSE, # does not show the error terms/residuals
   sizeMan = 5, # width of manifest var box
-  sizeLat = 10,
-  layout = 'circle'
+  sizeLat = 6,
+  layout = 'circle2'
 )
 
 ```
@@ -407,7 +416,8 @@ figure_sakaluk_cfa_6factor_fit <- semPaths(
 ## Sexual Scripts Sakaluk 1-factor and 6-factor model comparison
 ```{r}
 
-anova(sakaluk_cfa_1factor_fit, sakaluk_cfa_2factor_fit)
+anova(sakaluk_cfa_1factor_fit, sakaluk_cfa_6factor_fit)
+
 
 ```
 
@@ -601,11 +611,11 @@ figure_seabrook_cfa_4factor_fit <- semPaths(
   curvePivot = TRUE, # making curved arrows
   esize = 1, # thickness of arrows
   nCharNodes = 8, # uses 8 characters of the name in the boxes
-  edge.label.cex = 1,
+  edge.label.cex = 0.75,
   residuals = FALSE, # does not show the error terms/residuals
-  sizeMan = 5, # width of manifest var box
-  sizeLat = 10,
-  layout = 'circle'
+  sizeMan = 6, # width of manifest var box
+  sizeLat = 7,
+  layout = 'circle2'
 )
 
 ```
@@ -699,12 +709,13 @@ figure_seabrook_cfa_higherfactor_fit <- semPaths(
   intercepts = FALSE,
   curvePivot = TRUE, # making curved arrows
   esize = 1, # thickness of arrows
-  nCharNodes = 8, # uses 8 characters of the name in the boxes
-  edge.label.cex = 1,
+  nCharNodes = 10, # uses 8 characters of the name in the boxes
+  edge.label.cex = 0.75,
+  node.label.cex = 8,
   residuals = FALSE, # does not show the error terms/residuals
-  sizeMan = 5, # width of manifest var box
-  sizeLat = 10,
-  layout = 'circle'
+  sizeMan = 4, # width of manifest var box
+  sizeLat = 8,
+  layout = 'tree2'
 )
 
 ```
@@ -863,7 +874,7 @@ scree(data_krahe, pc = FALSE)
 
 # Parallel analysis
 
-fa.parallel(data_krahe, fa = 'fa')
+PARALLEL(data_krahe)
 
 ```
 
@@ -871,10 +882,10 @@ fa.parallel(data_krahe, fa = 'fa')
 ```{r}
 
 efa_krahe_fit <- efa(data = data_krahe,
-                     nfactors = 5, # change depending how many factors are suggested
+                     nfactors = 12, # change depending how many factors are suggested
                      sample.cov = cormat_data_krahe,
                      rotation = 'oblimin', # oblique rotation bc factors are obv related
-                     output = 'lavaan'
+                     output = 'efa'
                      )
 
 summary(efa_krahe_fit)
@@ -887,10 +898,12 @@ summary(efa_krahe_fit)
 
 data_networkmodel <- data_hetero_malefemale %>% 
   select(
-    - 'id',
-    - 'gender',
-    - starts_with('ammsa')
-  )
+    -'id',
+    -'gender',
+    -starts_with('ammsa'))
+
+
+cormat_allscales <- cor(data_networkmodel)
 
 
 if (!file.exists('./rda/sexualscript_networkmodel.rda')) {
@@ -898,7 +911,8 @@ if (!file.exists('./rda/sexualscript_networkmodel.rda')) {
   # model the variance-covariance matrix
   networkmodel <- varcov(data = data_networkmodel,
                         type = 'ggm', # Gaussian graphical model
-                        omega = 'full') # estimate every element freely
+                        omega = 'Full', # estimate every element freely
+                        optimizer = 'cpp_Nelder-Mead')
 
 
   # run model and estimate structure --> time consuming
@@ -1125,24 +1139,7 @@ parallel_sexualscripts <- fa.parallel(data_networkmodel)
 
 ```{r}
 
-# trying spinglass algorithm -  only allows items to be part of one community 
-
 set.seed(4905)
-
-communities <- as.igraph(networkmodel_final, attributes = TRUE) %>% 
-  spinglass.community()
-
-communities$membership
-
-communities_graph <- cluster_spinglass(graph_network,
-                                       spins = 100,
-                                       start.temp = 1,
-                                       stop.temp = 0.01,
-                                       gamma = 1)
-```
-
-
-```{r}
 
 # exploratory graph analysis
 
@@ -1157,15 +1154,37 @@ ega_sexualscripts <-EGAnet::EGA(data_networkmodel,
 
 ```{r}
 
-# Walktrap algorithm
+graph_network_full <- 
+  qgraph(getmatrix(networkmodel_final, "omega"),
+         labels = networklabels,
+         layout = network_graph_reduced_1$layout,
+         vsize = 4,
+         edge.labels = TRUE,
+         edge.label.cex = .40,
+         edge.label.bg = "white",
+         edge.label.position = .28,
+         edge.color = "#151414",
+         vTrans = 200,
+         negDashed = TRUE,
+         curveAll = TRUE)
 
-cluster_walktrap(
-  graph = graph_network,
-  weights = NULL,
-  steps = 5, # no idea, how much would make sense here?
-  merges = TRUE,
-  membership = TRUE
-)
+
+walktrap_full <- 
+  walktrap.community(as.igraph(graph_network_full),
+                     weights = abs(E(as.igraph(graph_network_full))$weight))
+
+
+graph_network_full_walk <- 
+  qgraph(getmatrix(networkmodel_final, "omega"),
+         labels = networklabels,
+         layout = network_graph_reduced_1$layout,
+         vsize = 4,
+         edge.color = "#151414",
+         vTrans = 200,
+         negDashed = TRUE,
+         curveAll = TRUE,
+         groups = as.factor(walktrap_full$membership),
+         palette = "colorblind")
 
 ```
 
@@ -1175,8 +1194,9 @@ cluster_walktrap(
 
 data_ammsa <- data_hetero_malefemale %>% 
   select(
-    starts_with('ammsa')
-  )
+    starts_with('ammsa'))
+
+cormat_ammsa <- cor(data_ammsa)
 
 
 if (!file.exists('./rda/ammsa_networkmodel.rda')) {
@@ -1184,7 +1204,8 @@ if (!file.exists('./rda/ammsa_networkmodel.rda')) {
   # model the variance-covariance matrix
   networkmodel_ammsa <- varcov(data = data_ammsa,
                                type = 'ggm', # Gaussian graphical model
-                               omega = 'full') # estimate every element freely
+                               omega = 'Full', # estimate every element freely
+                               optimizer = 'cpp_Nelder-Mead')
 
 
   # run model and estimate structure --> time consuming
@@ -1218,7 +1239,7 @@ pars_networkmodel_ammsa <- parameters(networkmodel_ammsa_final) # all parameters
 
 ## Graph Network Model AMMSA
 ```{r}
-  
+
 network_ammsa <- getmatrix(
   networkmodel_ammsa_final, 
   'omega')
@@ -1230,11 +1251,11 @@ graph_network_ammsa <- qgraph(network_ammsa,
                               title = 'AMMSA-21 Network Model',
                               labels = 1:21, 
                               edge.labels = TRUE,
-                              edge.labels.cex = 0.4,
-                              vsize = 2,
+                              vsize = 4,
                               shape = 'circle',
                               filetype = 'pdf',
                               filename = 'ammsa_network')
+
 
 ```
 
@@ -1293,32 +1314,14 @@ aspl_network_ammsa <- mean(spl_network_ammsa)
 
 # how many 'factors' would I have?
 
-parallel_ammsa <- fa.parallel(data_networkmodel_ammsa)
+parallel_ammsa <- fa.parallel(data_ammsa)
 
 ```
 
 
 ```{r}
-
-# trying spinglass algorithm -  only allows items to be part of one community 
 
 set.seed(4321)
-
-communities_ammsa <- as.igraph(networkmodel_final_ammsa, attributes = TRUE) %>% 
-  spinglass.community()
-
-communities_ammsa$membership
-
-communities_graph_ammsa <- cluster_spinglass(graph_network_ammsa,
-                                             spins = 100,
-                                             start.temp = 1,
-                                             stop.temp = 0.01,
-                                             gamma = 1)
-
-```
-
-
-```{r}
 
 # exploratory graph analysis
 
@@ -1327,6 +1330,7 @@ ega_ammsa <-EGAnet::EGA(data_ammsa,
                         algorithm = 'walktrap',
                         plot.EGA = TRUE,
                         )
+
 
 ```
 
@@ -1433,7 +1437,7 @@ labels_sakaluk <- c(
   'emse_1',
   'emse_2',
   'emse_3',
-  'emse_4',
+  'emse_4'
 )
 
 
@@ -1448,8 +1452,7 @@ graph_network_sakaluk <- qgraph(network_sakaluk,
                                 title = 'Network Model Sexual Scripts by Sakaluk et al. (2014)',
                                 labels = labels_sakaluk, 
                                 edge.labels = TRUE,
-                                edge.labels.cex = 0.4,
-                                vsize = 2,
+                                vsize = 5,
                                 shape = 'circle',
                                 filetype = 'pdf',
                                 filename = 'sakaluk_network')
@@ -1518,25 +1521,7 @@ parallel_sakaluk <- fa.parallel(data_networkmodel_sakaluk)
 
 ```{r}
 
-# trying spinglass algorithm -  only allows items to be part of one community 
-
 set.seed(5432)
-
-communities_sakaluk <- as.igraph(networkmodel_final_sakaluk, attributes = TRUE) %>% 
-  spinglass.community()
-
-communities_sakaluk$membership
-
-communities_graph_sakaluk <- cluster_spinglass(graph_network_sakaluk,
-                                             spins = 100,
-                                             start.temp = 1,
-                                             stop.temp = 0.01,
-                                             gamma = 1)
-
-```
-
-
-```{r}
 
 # exploratory graph analysis
 
@@ -1637,7 +1622,7 @@ labels_seabrook <- c(
   'dost_2',
   'dost_3',
   'dost_4',
-  'dost_5',
+  'dost_5'
 )
 
 
@@ -1652,8 +1637,7 @@ graph_network_seabrook <- qgraph(network_seabrook,
                                 title = 'Network Model Sexual Scripts by Seabrook et al. (2016)',
                                 labels = labels_seabrook, 
                                 edge.labels = TRUE,
-                                edge.labels.cex = 0.4,
-                                vsize = 2,
+                                vsize = 5,
                                 shape = 'circle',
                                 filetype = 'pdf',
                                 filename = 'seabrook_network')
@@ -1722,25 +1706,7 @@ parallel_seabrook <- fa.parallel(data_networkmodel_seabrook)
 
 ```{r}
 
-# trying spinglass algorithm -  only allows items to be part of one community 
-
 set.seed(6543)
-
-communities_seabrook <- as.igraph(networkmodel_final_seabrook, attributes = TRUE) %>% 
-  spinglass.community()
-
-communities_seabrook$membership
-
-communities_graph_seabrook <- cluster_spinglass(graph_network_seabrook,
-                                             spins = 100,
-                                             start.temp = 1,
-                                             stop.temp = 0.01,
-                                             gamma = 1)
-
-```
-
-
-```{r}
 
 # exploratory graph analysis
 
@@ -1781,7 +1747,8 @@ data_krahe <- data_hetero_malefemale %>%
     'knownbefore',
     starts_with('substances'), 
     starts_with('drunkstoned'), 
-    starts_with('consent'), 
+    starts_with('consentgirl'),
+    starts_with('consentboy'),
     starts_with('afterfeeling'), 
     starts_with('outlook')
   )
@@ -1882,8 +1849,7 @@ graph_network_krahe <- qgraph(network_krahe,
                                 title = 'Network Model Sexual Scripts by Krahé et al. (2007)',
                                 labels = labels_krahe, 
                                 edge.labels = TRUE,
-                                edge.labels.cex = 0.4,
-                                vsize = 2,
+                                vsize = 5,
                                 shape = 'circle',
                                 filetype = 'pdf',
                                 filename = 'krahe_network')
@@ -1953,25 +1919,7 @@ parallel_krahe <- fa.parallel(data_networkmodel_krahe)
 
 ```{r}
 
-# trying spinglass algorithm -  only allows items to be part of one community 
-
 set.seed(7654)
-
-communities_krahe <- as.igraph(networkmodel_final_krahe, attributes = TRUE) %>% 
-  spinglass.community()
-
-communities_krahe$membership
-
-communities_graph_krahe <- cluster_spinglass(graph_network_krahe,
-                                             spins = 100,
-                                             start.temp = 1,
-                                             stop.temp = 0.01,
-                                             gamma = 1)
-
-```
-
-
-```{r}
 
 # exploratory graph analysis
 
@@ -1979,6 +1927,8 @@ ega_krahe <-EGAnet::EGA(data_krahe,
                            model = 'glasso',
                            algorithm = 'walktrap',
                            plot.EGA = TRUE)
+
+ega_krahe$dim.variables
 
 ```
 
