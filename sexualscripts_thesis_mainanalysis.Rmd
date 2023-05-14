@@ -2,7 +2,9 @@
 title: "Sexual Scripts Master Thesis Main Analysis"
 author: "Fanny Habacht"
 date: "2023-03-06"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -16,7 +18,7 @@ This code includes the main analysis of my master thesis, including factor analy
 # Packages
 ```{r}
 
-packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'igraph', 'IsingSampler', 'psychonetrics', 'EGAnet', 'EFAtools', 'missMethods', 'norm')
+packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'psychonetrics', 'EGAnet', 'EFAtools', 'missMethods', 'norm')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -138,7 +140,9 @@ figure_ammsa_cfa_fit <- semPaths(
   sizeMan = 5, # width of manifest var box
   sizeLat = 10,
   layout = 'circle',
-  nodeLabels = c(1:21, 'AMMSA')
+  nodeLabels = c(1:21, 'AMMSA-21'),
+  groups = 'latents',
+  color = '#D9ACED'
 )
 
 ```
@@ -214,6 +218,10 @@ fitind_ammsa_cfa_invar_2 <- fitmeasures(ammsa_cfa_invar_2)
 fitind_ammsa_cfa_invar_3 <- fitmeasures(ammsa_cfa_invar_3)
 fitind_ammsa_cfa_invar_4 <- fitmeasures(ammsa_cfa_invar_4)
 
+fitind_ammsa_cfa_invar_1
+fitind_ammsa_cfa_invar_2
+fitind_ammsa_cfa_invar_3
+fitind_ammsa_cfa_invar_4
 
 # comparing invariance models
 
@@ -399,15 +407,18 @@ table_sakaluk_cfa_6factor_fit <- semTable(
 figure_sakaluk_cfa_6factor_fit <- semPaths(
   object = sakaluk_cfa_6factor_fit,
   whatLabels = 'std',
+  nodeLabels = c('SS1', 'SS2', 'SS3', 'SS4', 'SS5', 'SS6', 'SS7', 'SS8', 'SS9', 'SC1', 'SC2', 'SC3', 'SC4', 'SC5', 'SC6', 'SC7', 'SD1', 'SD2', 'SD3', 'SD4', 'SD5', 'PO1', 'PO2', 'PO3', 'PO4', 'P1', 'P2' , 'P3', 'P4', 'ES1', 'ES2', 'ES3', 'SS', 'SC', 'SD', 'PO', 'P', 'ES'),
   intercepts = FALSE,
   curvePivot = TRUE, # making curved arrows
   esize = 1, # thickness of arrows
   nCharNodes = 8, # uses 8 characters of the name in the boxes
-  edge.label.cex = 0.5,
+  edge.label.cex = 0.75,
   residuals = FALSE, # does not show the error terms/residuals
-  sizeMan = 5, # width of manifest var box
-  sizeLat = 6,
-  layout = 'circle2'
+  sizeMan = 5.5, # width of manifest var box
+  sizeLat = 7,
+  layout = 'circle2',
+  groups = 'latents',
+  color = c('#D9ACED', 'pink', '#77BDE7', '#96F3C0', '#F3E196', '#67A175')
 )
 
 ```
@@ -706,16 +717,19 @@ table_seabrook_cfa_higherfactor_fit <- semTable(
 figure_seabrook_cfa_higherfactor_fit <- semPaths(
   object = seabrook_cfa_higherfactor_fit,
   whatLabels = 'std',
+  nodeLabels = c('CC1', 'CC2', 'CC3', 'CC4', 'CC5', 'CC6', 'CC7', 'CC8', 'I1', 'I2', 'I3', 'I4', 'A1', 'A2', 'A3', 'A4', 'A5', 'DS1', 'DS2', 'DS3', 'DS4', 'DS5', 'Courtship', 'Initiators', 'Appearance', 'DoubleStandards', 'SexualScripts'),
   intercepts = FALSE,
   curvePivot = TRUE, # making curved arrows
   esize = 1, # thickness of arrows
-  nCharNodes = 10, # uses 8 characters of the name in the boxes
   edge.label.cex = 0.75,
-  node.label.cex = 8,
+  label.cex = 1.75,
   residuals = FALSE, # does not show the error terms/residuals
-  sizeMan = 4, # width of manifest var box
-  sizeLat = 8,
-  layout = 'tree2'
+  sizeMan = 3, # width of manifest var box
+  sizeLat = 12,
+  nCharNodes = 15, # uses 8 characters of the name in the boxes
+  layout = 'tree2',
+  groups = 'latents',
+  color = c('#D9ACED', 'pink', '#77BDE7', '#F3E196', '#67A175')
 )
 
 ```
@@ -903,43 +917,13 @@ data_networkmodel <- data_hetero_malefemale %>%
     -starts_with('ammsa'))
 
 
-cormat_allscales <- cor(data_networkmodel)
+networkmodel_final <- EBICglasso(cor(data_networkmodel, use = "pairwise.complete"), returnAllResults = FALSE, nrow(data_networkmodel))
 
+networkmodel_final_ebic <- data.frame(networkmodel_final$ebic)
 
-if (!file.exists('./rda/sexualscript_networkmodel.rda')) {
-  
-  # model the variance-covariance matrix
-  networkmodel <- varcov(data = data_networkmodel,
-                        type = 'ggm', # Gaussian graphical model
-                        omega = 'Full', # estimate every element freely
-                        optimizer = 'cpp_Nelder-Mead')
+networkmodel_final_lambda <- data.frame(networkmodel_final$lambda)
 
-
-  # run model and estimate structure --> time consuming
-  networkmodel_final <- networkmodel %>% 
-    runmodel() %>% 
-    prune(alpha = 0.05, recursive = TRUE) %>% # iterative process pruning non-significant parameters and refitting model
-    modelsearch(
-      criterion = 'bic', # optimal model with smallest BIC
-      prunealpha = 0.05, # min alpha, larger edges will be removed
-      addalpha = 0.05, # max alpha, smaller edges will be added
-    )
-
-  
-  save(networkmodel_final, file = './rda/sexualscript_networkmodel.rda')
-  
-  
-} else {
-  
-  load('./rda/sexualscript_networkmodel.rda')
-  
-}
-
-
-
-fit_networkmodel <- fit(networkmodel_final) # fit indices
-
-pars_networkmodel <- parameters(networkmodel_final) # all parameters
+networkmodel_final_results <- cbind(networkmodel_final_ebic, networkmodel_final_lambda)
 
 ```
 
@@ -980,7 +964,6 @@ networklabels <- c(
   'emse_1',
   'emse_2',
   'emse_3',
-  'emse_4',
   'cour_1',
   'cour_2',
   'cour_3',
@@ -1046,19 +1029,15 @@ networklabels <- c(
 )
 
 
-network <- getmatrix(
-  networkmodel_final, 
-  'omega')
 
-
-graph_network <- qgraph(network,
+graph_network <- qgraph(networkmodel_final,
                         layout = 'spring',
                         theme = 'colorblind',
-                        title = 'Sexual Script Network Model',
-                        labels = networklabels, 
-                        edge.labels = TRUE,
-                        edge.labels.cex = 0.4,
-                        vsize = 2,
+                        title = 'Sexual Script Network Model', 
+                        edge.labels = FALSE,
+                        labels = networklabels,
+                        vsize = 4,
+                        label.cex = 1,
                         shape = 'circle',
                         filetype = 'pdf',
                         filename = 'sexualscriptnetwork')
@@ -1148,43 +1127,6 @@ ega_sexualscripts <-EGAnet::EGA(data_networkmodel,
                                 algorithm = 'walktrap',
                                 plot.EGA = TRUE,
                                 )
-
-```
-
-
-```{r}
-
-graph_network_full <- 
-  qgraph(getmatrix(networkmodel_final, "omega"),
-         labels = networklabels,
-         layout = network_graph_reduced_1$layout,
-         vsize = 4,
-         edge.labels = TRUE,
-         edge.label.cex = .40,
-         edge.label.bg = "white",
-         edge.label.position = .28,
-         edge.color = "#151414",
-         vTrans = 200,
-         negDashed = TRUE,
-         curveAll = TRUE)
-
-
-walktrap_full <- 
-  walktrap.community(as.igraph(graph_network_full),
-                     weights = abs(E(as.igraph(graph_network_full))$weight))
-
-
-graph_network_full_walk <- 
-  qgraph(getmatrix(networkmodel_final, "omega"),
-         labels = networklabels,
-         layout = network_graph_reduced_1$layout,
-         vsize = 4,
-         edge.color = "#151414",
-         vTrans = 200,
-         negDashed = TRUE,
-         curveAll = TRUE,
-         groups = as.factor(walktrap_full$membership),
-         palette = "colorblind")
 
 ```
 
@@ -1335,21 +1277,6 @@ ega_ammsa <-EGAnet::EGA(data_ammsa,
 ```
 
 
-```{r}
-
-# Walktrap algorithm
-
-cluster_walktrap(
-  graph = graph_network_ammsa,
-  weights = NULL,
-  steps = 5, # no idea, how much would make sense here?
-  merges = TRUE,
-  membership = TRUE
-)
-
-```
-
-
 # Network Model Sakaluk
 ```{r}
 
@@ -1436,8 +1363,7 @@ labels_sakaluk <- c(
   'play_4',
   'emse_1',
   'emse_2',
-  'emse_3',
-  'emse_4'
+  'emse_3'
 )
 
 
@@ -1514,7 +1440,7 @@ aspl_network_sakaluk <- mean(spl_network_sakaluk)
 
 # how many 'factors' would I have?
 
-parallel_sakaluk <- fa.parallel(data_networkmodel_sakaluk)
+parallel_sakaluk <- fa.parallel(data_sakaluk)
 
 ```
 
@@ -1529,21 +1455,6 @@ ega_sakaluk <-EGAnet::EGA(data_sakaluk,
                         model = 'glasso',
                         algorithm = 'walktrap',
                         plot.EGA = TRUE)
-
-```
-
-
-```{r}
-
-# Walktrap algorithm
-
-cluster_walktrap(
-  graph = graph_network_sakaluk,
-  weights = NULL,
-  steps = 5, # no idea, how much would make sense here?
-  merges = TRUE,
-  membership = TRUE
-)
 
 ```
 
@@ -1699,7 +1610,7 @@ aspl_network_seabrook <- mean(spl_network_seabrook)
 
 # how many 'factors' would I have?
 
-parallel_seabrook <- fa.parallel(data_networkmodel_seabrook)
+parallel_seabrook <- fa.parallel(data_seabrook)
 
 ```
 
@@ -1714,21 +1625,6 @@ ega_seabrook <-EGAnet::EGA(data_seabrook,
                            model = 'glasso',
                            algorithm = 'walktrap',
                            plot.EGA = TRUE)
-
-```
-
-
-```{r}
-
-# Walktrap algorithm
-
-cluster_walktrap(
-  graph = graph_network_seabrook,
-  weights = NULL,
-  steps = 5, # no idea, how much would make sense here?
-  merges = TRUE,
-  membership = TRUE
-)
 
 ```
 
@@ -1911,7 +1807,7 @@ aspl_network_krahe <- mean(spl_network_krahe)
 
 # how many 'factors' would I have?
 
-parallel_krahe <- fa.parallel(data_networkmodel_krahe)
+parallel_krahe <- fa.parallel(data_krahe)
 
 
 ```
@@ -1933,17 +1829,5 @@ ega_krahe$dim.variables
 ```
 
 
-```{r}
-
-# Walktrap algorithm
-
-cluster_walktrap(
-  graph = graph_network_krahe,
-  weights = NULL,
-  steps = 5, # no idea, how much would make sense here?
-  merges = TRUE,
-  membership = TRUE
-)
-
-```
+###################################################################################
 

@@ -71,10 +71,236 @@ data_onlyhetero_malefemale <- data_onlyhetero %>%
 ```
 
 
-## Extract only scales (remove demographics)
+## Missing data screening and imputation
+```{r}
+
+# sum of missings
+
+is.na(data_onlyhetero_malefemale) %>%
+  sum()
+
+
+# location of missing values for each column
+
+sapply(data_onlyhetero_malefemale, function(x) which(is.na(x)))
+
+
+```
+
+
+# Creating total scores
 ```{r}
 
 data_heteroscales_raw <- data_onlyhetero_malefemale %>% 
+  mutate(
+    ammsa_total = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('ammsa')),
+      na.rm = TRUE),
+    sakaluk_total = rowMeans(
+      select(data_onlyhetero_malefemale,
+             starts_with('sexualstandards'),
+             starts_with('complexity'),
+             starts_with('sexdrive'),
+             starts_with('performanceandorgasm'),
+             starts_with('player'),
+             starts_with('emotionalsex')),
+        na.rm = TRUE), 
+    sakaluk_sexualstandards = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('sexualstandards')),
+      na.rm = TRUE),
+    sakaluk_complexity = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('complexity')),
+      na.rm = TRUE),
+    sakaluk_sexdrive = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('sexdrive')),
+      na.rm = TRUE),
+    sakaluk_performanceorgasm = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('performanceandorgasm')),
+      na.rm = TRUE),
+    sakaluk_player = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('player')),
+      na.rm = TRUE),
+    sakaluk_emotionalsex = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('emotionalsex')),
+      na.rm = TRUE),
+    seabrook_total = rowMeans(
+      select(data_onlyhetero_malefemale,
+             starts_with('courtship'), 
+             starts_with('initiators'), 
+             starts_with('appearance'), 
+             starts_with('doublestandards')),
+      na.rm = TRUE),
+    seabrook_courtship = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('courtship')),
+      na.rm = TRUE),
+    seabrook_initiators = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('initiators')),
+      na.rm = TRUE),
+    seabrook_appearance = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('appearance')),
+      na.rm = TRUE),
+    seabrook_doublestandards = rowMeans(
+      select(data_onlyhetero_malefemale, starts_with('doublestandards')),
+      na.rm = TRUE),
+  )
+
+```
+
+
+# Descriptives Scales
+```{r}
+
+descriptives_mean <- data_heteroscales_raw %>% 
+  summarise(
+    mean_ammsa = mean(ammsa_total),
+    mean_sakaluk = mean(sakaluk_total),
+    mean_sexualstandards = mean(sakaluk_sexualstandards),
+    mean_complexity = mean(sakaluk_complexity),
+    mean_sexdrive = mean(sakaluk_sexdrive),
+    mean_performance = mean(sakaluk_performanceorgasm),
+    mean_player = mean(sakaluk_player),
+    mean_emotionalsex = mean(sakaluk_emotionalsex),
+    mean_seabrook = mean(seabrook_total),
+    mean_initiators = mean(seabrook_initiators),
+    mean_courtship = mean(seabrook_courtship),
+    mean_appearance = mean(seabrook_appearance),
+    mean_doublestandards = mean(seabrook_doublestandards)
+  )
+
+
+descriptives_sd <- data_heteroscales_raw %>% 
+  summarise(
+    sd_ammsa = sd(ammsa_total),
+    sd_sakaluk = sd(sakaluk_total),
+    sd_sexualstandards = sd(sakaluk_sexualstandards),
+    sd_complexity = sd(sakaluk_complexity),
+    sd_sexdrive = sd(sakaluk_sexdrive),
+    sd_performance = sd(sakaluk_performanceorgasm),
+    sd_player = sd(sakaluk_player),
+    sd_emotionalsex = sd(sakaluk_emotionalsex),
+    sd_seabrook = sd(seabrook_total),
+    sd_initiators = sd(seabrook_initiators),
+    sd_courtship = sd(seabrook_courtship),
+    sd_appearance = sd(seabrook_appearance),
+    sd_doublestandards = sd(seabrook_doublestandards)
+  )
+
+
+descriptives_mean_gender <- data_heteroscales_raw %>% 
+  group_by(gender) %>% 
+  summarise(
+    mean_ammsa = mean(ammsa_total),
+    mean_sakaluk = mean(sakaluk_total),
+    mean_sexualstandards = mean(sakaluk_sexualstandards),
+    mean_complexity = mean(sakaluk_complexity),
+    mean_sexdrive = mean(sakaluk_sexdrive),
+    mean_performance = mean(sakaluk_performanceorgasm),
+    mean_player = mean(sakaluk_player),
+    mean_emotionalsex = mean(sakaluk_emotionalsex),
+    mean_seabrook = mean(seabrook_total),
+    mean_initiators = mean(seabrook_initiators),
+    mean_courtship = mean(seabrook_courtship),
+    mean_appearance = mean(seabrook_appearance),
+    mean_doublestandards = mean(seabrook_doublestandards)
+  )
+
+
+descriptives_sd_gender <- data_heteroscales_raw %>% 
+  group_by(gender) %>% 
+  summarise(
+    sd_ammsa = sd(ammsa_total),
+    sd_sakaluk = sd(sakaluk_total),
+    sd_sexualstandards = sd(sakaluk_sexualstandards),
+    sd_complexity = sd(sakaluk_complexity),
+    sd_sexdrive = sd(sakaluk_sexdrive),
+    sd_performance = sd(sakaluk_performanceorgasm),
+    sd_player = sd(sakaluk_player),
+    sd_emotionalsex = sd(sakaluk_emotionalsex),
+    sd_seabrook = sd(seabrook_total),
+    sd_initiators = sd(seabrook_initiators),
+    sd_courtship = sd(seabrook_courtship),
+    sd_appearance = sd(seabrook_appearance),
+    sd_doublestandards = sd(seabrook_doublestandards)
+  )
+
+```
+
+
+## Bivariate correlations between scales/subscales
+```{r}
+
+index <- data_heteroscales_raw %>% 
+  select(
+    ammsa_total,
+    sakaluk_total,
+    sakaluk_sexualstandards,
+    sakaluk_complexity,
+    sakaluk_sexdrive,
+    sakaluk_performanceorgasm,
+    sakaluk_player,
+    sakaluk_emotionalsex,
+    seabrook_total,
+    seabrook_courtship,
+    seabrook_initiators,
+    seabrook_appearance,
+    seabrook_doublestandards
+  )
+
+cormat_scales <- cor.matrix(index, sig = TRUE, print = c('cor', 'p'))
+
+```
+
+
+## Differences between men and women
+```{r}
+
+women <- data_heteroscales_raw %>% 
+  filter(gender == 2)
+
+men <- data_heteroscales_raw %>% 
+  filter(gender == 1)
+
+
+t.test(women$ammsa_total, men$ammsa_total)
+
+t.test(women$sakaluk_total, men$sakaluk_total)
+
+t.test(women$sakaluk_sexualstandards, men$sakaluk_sexualstandards)
+
+t.test(women$sakaluk_emotionalsex, men$sakaluk_emotionalsex)
+
+t.test(women$sakaluk_player, men$sakaluk_player)
+
+t.test(women$sakaluk_performanceorgasm, men$sakaluk_performanceorgasm)
+
+t.test(women$sakaluk_sexdrive, men$sakaluk_sexdrive)
+
+t.test(women$sakaluk_complexity, men$sakaluk_complexity)
+
+t.test(women$seabrook_total, men$seabrook_total)
+
+t.test(women$seabrook_courtship, men$seabrook_courtship)
+
+t.test(women$seabrook_initiators, men$seabrook_initiators)
+
+t.test(women$seabrook_appearance, men$seabrook_appearance)
+
+t.test(women$seabrook_doublestandards, men$seabrook_doublestandards)
+
+t.test(women$player_1, men$player_1)
+
+t.test(women$player_4, men$player_4)
+
+t.test(women$sexualstandards_1, women$sexualstandards_2)
+
+t.test(men$sexualstandards_1, men$sexualstandards_2)
+```
+
+
+# Extract only scales (remove demographics)
+```{r}
+
+data_heteroscales <- data_heteroscales_raw %>% 
   select(
     'id', 
     starts_with('sexualstandards'), 
@@ -100,97 +326,29 @@ data_heteroscales_raw <- data_onlyhetero_malefemale %>%
     starts_with('consentboy'),
     starts_with('consentgirl'), 
     starts_with('afterfeeling'), 
-    starts_with('outlook')) 
+    starts_with('outlook'),
+    starts_with('sakaluk'),
+    starts_with('seabrook')
+    ) 
 
 ```
 
 
-## Missing data screening and imputation
+# Missing Data
 ```{r}
-
-# sum of missings
-
-is.na(data_heteroscales_raw) %>%
-  sum()
-
-
-# location of missing values for each column
-
-sapply(data_heteroscales_raw, function(x) which(is.na(x)))
-
 
 # Little's MCAR test
 
-na.test(data_heteroscales_raw, output = TRUE)
+na.test(data_heteroscales, output = TRUE)
 
 
 # EM imputation
 
 set.seed(9191)
 
-data_heteroscales <- impute_EM(data_heteroscales_raw,
-                            stochastic = FALSE
-                            )
-
-```
-
-
-# Creating total scores
-```{r}
-
-data_heteroscales <- data_heteroscales %>% 
-  mutate(
-    ammsa_total = rowMeans(
-      select(data_heteroscales, starts_with('ammsa')),
-      na.rm = FALSE),
-    sakaluk_total = rowMeans(
-      select(data_heteroscales,
-             starts_with('sexualstandards'),
-             starts_with('complexity'),
-             starts_with('sexdrive'),
-             starts_with('performanceandorgasm'),
-             starts_with('player'),
-             starts_with('emotionalsex')),
-        na.rm = FALSE), 
-    sakaluk_sexualstandards = rowMeans(
-      select(data_heteroscales, starts_with('sexualstandards')),
-      na.rm = FALSE),
-    sakaluk_complexity = rowMeans(
-      select(data_heteroscales, starts_with('complexity')),
-      na.rm = FALSE),
-    sakaluk_sexdrive = rowMeans(
-      select(data_heteroscales, starts_with('sexdrive')),
-      na.rm = FALSE),
-    sakaluk_performanceorgasm = rowMeans(
-      select(data_heteroscales, starts_with('performanceandorgasm')),
-      na.rm = FALSE),
-    sakaluk_player = rowMeans(
-      select(data_heteroscales, starts_with('player')),
-      na.rm = FALSE),
-    sakaluk_emotionalsex = rowMeans(
-      select(data_heteroscales, starts_with('emotionalsex')),
-      na.rm = FALSE),
-    seabrook_total = rowMeans(
-      select(data_heteroscales,
-             starts_with('courtship'), 
-             starts_with('initiators'), 
-             starts_with('appearance'), 
-             starts_with('doublestandards')),
-      na.rm = FALSE),
-    seabrook_courtship = rowMeans(
-      select(data_heteroscales, starts_with('courtship')),
-      na.rm = FALSE),
-    seabrook_initiators = rowMeans(
-      select(data_heteroscales, starts_with('initiators')),
-      na.rm = FALSE),
-    seabrook_appearance = rowMeans(
-      select(data_heteroscales, starts_with('appearance')),
-      na.rm = FALSE),
-    seabrook_doublestandards = rowMeans(
-      select(data_heteroscales, starts_with('doublestandards')),
-      na.rm = FALSE),
-  )
-
+data_heteroscales <- impute_EM(data_heteroscales,
+                                        stochastic = FALSE
+                                        )
 ```
 
 
@@ -875,6 +1033,9 @@ mahal_data_sakaluktotal <- data.frame(ID_sakaluktotal, mahal_sakaluktotal, mahal
 arrange(mahal_data_sakaluktotal, by = desc(mahal_sakaluktotal)) # arrange descending
 
 
+mardia(sakaluk_scale)
+
+
 ```
 
 
@@ -939,6 +1100,46 @@ ID_seabrooktotal <- 1:nrow(seabrook_scale)
 mahal_data_seabrooktotal <- data.frame(ID_seabrooktotal, mahal_seabrooktotal, mahal_p_seabrooktotal)
 
 arrange(mahal_data_seabrooktotal, by = desc(mahal_seabrooktotal))
+
+
+
+```
+
+
+## Krahe scale
+```{r}
+
+krahe_scale <- data_heteroscales %>%
+  select(
+    starts_with("arranged"),
+    starts_with("situation"),
+    starts_with("sex_"),
+    starts_with("sexlocation"),
+    starts_with("contraception"),
+    starts_with("metbefore"),
+    starts_with("knownbefore"),
+    starts_with("substances"),
+    starts_with("drunkstoned"),
+    starts_with("consentboy"),
+    starts_with("consentgirl"),
+    starts_with("afterfeeling"),
+    starts_with("outlook")
+  )
+
+
+diagnostics_krahe <- mvn(krahe_scale,
+                           univariateTest = 'SW',
+                           univariatePlot = 'box',
+                           showOutliers = TRUE,
+                           showNewData = TRUE)
+
+
+
+diagnostics_krahe$univariateNormality # Shapiro-Wilk test
+
+krahe_diagnostics_df <- diagnostics_krahe$Descriptives # univariate skewness and kurtosis
+
+write.csv2(krahe_diagnostics_df, 'krahe_univariatenormality.csv')
 
 
 ```

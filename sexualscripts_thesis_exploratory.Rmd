@@ -1,0 +1,124 @@
+---
+title: "Sexual Scripts Master Thesis Exploratory Analyses"
+author: "Fanny Habacht"
+date: "2023-04-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+This code includes any exploratory analyses concering the data of my master thesis.
+
+# Community based CFAs for the scales
+
+## Sakaluk 2-factor model
+
+```{r}
+
+
+
+```
+
+
+# Simulations
+
+## Network simulation
+
+continuous edge weights = connectivity between nodes (positive large assumes same state of nodes)
+
+continuous thresholds of nodes = the higher the threshold, the stronger the disposition that this node is 'on'
+
+temperature parameter = degree of randomness in the system; when beta shrinks to 0, all states become equally likely (= high degree of randomness)
+
+
+### Baseline
+```{r}
+
+# depends on the results of the network model? 
+# what the actual sample distribution looks like? 
+
+set.seed(1234) # to have the same random numbers again when re-running the code
+
+
+sexualscript_sim_base <- IsingSampler(
+  10000, # sample size I want
+  getmatrix(networkmodel_final, 'omega'),
+  c(rep(-,)), # where do the thresholds come from? min and max est in the network pars? they're just guesses
+  responses = c(0, 1) # always dichotomous for the Ising model - agree or not
+  )
+
+
+sexualscript_sim_base <- sexualscript_sim_base %>% # making a dataframe out of it
+  as.data.frame()
+
+
+sexualscript_sim_base$total <- rowSums(sexualscript_sim_base)
+
+
+hist_sexualscript_sim_base <- ggplot( 
+  ammsa_sim_base,
+  aes(
+    x = total
+    )) +
+  geom_histogram(
+    binwidth = 1,
+    color = 'black',
+    fill = 'grey'
+  ) +
+  scale_x_continuous(
+    limits = c(),
+    breaks = seq()
+  ) +
+  theme_classic()
+
+
+```
+
+
+## Persuasion network all scales
+```{r}
+
+# depends on what node has highest strength?
+
+
+sexualscript_sim_pers <- IsingSampler(
+  10000, 
+  getmatrix(networkmodel_final, 'omega'),
+  c(rep(,), , rep()), # what are the thresholds, beta etc.?
+  responses = c(0, 1))
+
+
+sexualscript_sim_pers <- sexualscript_sim_pers %>% 
+  as.data.frame()
+
+
+sexualscript_sim_pers$total <- rowSums(sexualscript_sim_pers)
+
+hist_sexualscript_sim_pers <- 
+  ggplot(sexualscript_sim_pers,
+         aes(
+           x = total
+         )) +
+  geom_histogram(
+    binwidth = 1
+    color = 'black',
+    fill = 'grey'
+  ) +
+  scale_x_continuous(
+    limits = c(),
+    breaks = seq()
+  ) +
+  theme_classic()
+
+
+
+
+t.test(sexualscript_sim_pers$total, sexualscript_sim_base$total) # comparing if theres a difference overall between baseline and persuasion
+
+```
+
+
+

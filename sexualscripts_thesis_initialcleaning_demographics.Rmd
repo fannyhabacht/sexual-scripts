@@ -98,6 +98,18 @@ names(data_clean) <- str_replace_all(names(data_clean), c(" " = ""))
 ```
 
 
+```{r}
+
+duration <- data_clean$duration
+mean(duration, na.rm = F)
+
+1010.45/60
+
+0.84*60
+
+```
+
+
 ## Coalescing the gendered versions of the Krahé et al scale
 ```{r}
 
