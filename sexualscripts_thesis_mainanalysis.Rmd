@@ -18,7 +18,7 @@ This code includes the main analysis of my master thesis, including factor analy
 # Packages
 ```{r}
 
-packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'psychonetrics', 'EGAnet', 'EFAtools', 'missMethods', 'norm')
+packages <- c('stats', 'readr', 'dplyr', 'ggplot2', 'psych', 'lavaan', 'semPlot', 'semTable', 'IsingFit', 'qgraph', 'igraph', 'psychonetrics', 'EGAnet', 'EFAtools', 'missMethods', 'norm')
 
 lapply(packages, library, character.only = TRUE)
 
@@ -1118,15 +1118,22 @@ parallel_sexualscripts <- fa.parallel(data_networkmodel)
 
 ```{r}
 
-set.seed(4905)
+walktrap_network <- walktrap.community(as.igraph(qgraph(graph_network)), weights = abs(E(as.igraph(qgraph(graph_network)))$weight))
 
-# exploratory graph analysis
 
-ega_sexualscripts <-EGAnet::EGA(data_networkmodel,
-                                model = 'glasso',
-                                algorithm = 'walktrap',
-                                plot.EGA = TRUE,
-                                )
+graph_network_walk <- qgraph(graph_network,
+                             layout = 'spring',
+                             theme = 'colorblind',
+                             color = c('#fcc201', '#6ea5f4', '#d43b3b', '#00a9b7','#a28be5', '#f2b3c4', '#67A175', '#b42f99','#BAF208', '#006400', '#fe992c', '#d5560c', '#066fa3', '#fffa86'),
+                             title = 'Sexual Script Network Model',
+                             edge.labels = FALSE,
+                             labels = networklabels,
+                             vsize = 4,
+                             label.cex = 1,
+                             shape = 'circle',
+                             filetype = 'pdf',
+                             filename = 'sexualscriptnetwork',
+                             groups = as.factor(walktrap_network$membership))
 
 ```
 
@@ -1263,16 +1270,20 @@ parallel_ammsa <- fa.parallel(data_ammsa)
 
 ```{r}
 
-set.seed(4321)
+walktrap_ammsa <- walktrap.community(as.igraph(graph_network_ammsa),
+                                 weights = abs(E(as.igraph(graph_network_ammsa))$weight))
 
-# exploratory graph analysis
-
-ega_ammsa <-EGAnet::EGA(data_ammsa,
-                        model = 'glasso',
-                        algorithm = 'walktrap',
-                        plot.EGA = TRUE,
-                        )
-
+graph_network_ammsa_walk <- qgraph(graph_network_ammsa,
+                                   layout = 'spring',
+                                   theme = 'colorblind',
+                                   title = 'AMMSA-21 Network Model',
+                                   labels = 1:21,
+                                   edge.labels = FALSE,
+                                   vsize = 6,
+                                   shape = 'circle',
+                                   filetype = 'pdf',
+                                   filename = 'ammsa_network',
+                                   groups = as.factor(walktrap_ammsa$membership))
 
 ```
 
@@ -1447,14 +1458,20 @@ parallel_sakaluk <- fa.parallel(data_sakaluk)
 
 ```{r}
 
-set.seed(5432)
+walktrap_sakaluk <- walktrap.community(as.igraph(graph_network_sakaluk),
+                                 weights = abs(E(as.igraph(graph_network_sakaluk))$weight))
 
-# exploratory graph analysis
-
-ega_sakaluk <-EGAnet::EGA(data_sakaluk,
-                        model = 'glasso',
-                        algorithm = 'walktrap',
-                        plot.EGA = TRUE)
+graph_network_sakaluk_walk <- qgraph(graph_network_sakaluk,
+                                   layout = 'spring',
+                                   theme = 'colorblind',
+                                   title = 'Network Model Sexual Scripts by Sakaluk et al. (2014)',
+                                   labels = labels_sakaluk,
+                                   edge.labels = FALSE,
+                                   vsize = 6,
+                                   shape = 'circle',
+                                   filetype = 'pdf',
+                                   filename = 'sakaluk_network',
+                                   groups = as.factor(walktrap_sakaluk$membership))
 
 ```
 
@@ -1617,14 +1634,20 @@ parallel_seabrook <- fa.parallel(data_seabrook)
 
 ```{r}
 
-set.seed(6543)
+walktrap_seabrook <- walktrap.community(as.igraph(graph_network_seabrook),
+                                 weights = abs(E(as.igraph(graph_network_seabrook))$weight))
 
-# exploratory graph analysis
-
-ega_seabrook <-EGAnet::EGA(data_seabrook,
-                           model = 'glasso',
-                           algorithm = 'walktrap',
-                           plot.EGA = TRUE)
+graph_network_sakaluk_walk <- qgraph(graph_network_seabrook,
+                                   layout = 'spring',
+                                   theme = 'colorblind',
+                                   title = 'Network Model Sexual Scripts by Seabrook et al. (2016)',
+                                   labels = labels_seabrook, 
+                                   edge.labels = FALSE,
+                                   vsize = 6,
+                                   shape = 'circle',
+                                   filetype = 'pdf',
+                                   filename = 'seabrook_network',
+                                   groups = as.factor(walktrap_seabrook$membership))
 
 ```
 
@@ -1815,16 +1838,21 @@ parallel_krahe <- fa.parallel(data_krahe)
 
 ```{r}
 
-set.seed(7654)
+walktrap_krahe <- walktrap.community(as.igraph(graph_network_krahe),
+                                 weights = abs(E(as.igraph(graph_network_krahe))$weight))
 
-# exploratory graph analysis
-
-ega_krahe <-EGAnet::EGA(data_krahe,
-                           model = 'glasso',
-                           algorithm = 'walktrap',
-                           plot.EGA = TRUE)
-
-ega_krahe$dim.variables
+graph_network_krahe_walk <- qgraph(graph_network_krahe,
+                                   layout = 'spring',
+                                   theme = 'colorblind',
+                                   color = c('#fcc201', '#6ea5f4', '#d43b3b', '#00a9b7','#a28be5', '#f2b3c4', '#67A175', '#b42f99','#8db700'),
+                                   title = 'Network Model Sexual Scripts by Krahé et al. (2007)',
+                                   labels = labels_krahe, 
+                                   edge.labels = FALSE,
+                                   vsize = 6,
+                                   shape = 'circle',
+                                   filetype = 'pdf',
+                                   filename = 'krahe_network',
+                                   groups = as.factor(walktrap_krahe$membership))
 
 ```
 
